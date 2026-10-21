@@ -164,8 +164,8 @@ def main() -> None:
             key_name = "GEMINI_API_KEY" if settings.ai_provider == "gemini" else "OPENAI_API_KEY"
             st.title("Analyze resume")
             st.error(
-                f"AI analysis is not configured. Set {key_name} in your local .env file "
-                "to use resume analysis. The Resume builder works without an AI key."
+                f"AI analysis is not configured. Set {key_name} in Streamlit Secrets "
+                "(or your local .env file) to use resume analysis. The Resume builder works without an AI key."
             )
             return
         render_analyze_page(

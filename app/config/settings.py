@@ -12,6 +12,23 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 
 
+def _get_config(key: str, default: str | None = None) -> str | None:
+    """Read a setting from environment variables, falling back to Streamlit secrets."""
+    val = os.getenv(key)
+    if val is not None:
+        return val
+    try:
+        import streamlit as st
+
+        if hasattr(st, "secrets") and key in st.secrets:
+            sec_val = st.secrets[key]
+            if sec_val is not None:
+                return str(sec_val)
+    except Exception:
+        pass
+    return default
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     ai_provider: str
@@ -34,17 +51,38 @@ class Settings:
     @classmethod
     def from_environment(cls) -> "Settings":
         """Load settings and reject malformed operational limits."""
-        timeout = float(os.getenv("OPENAI_TIMEOUT_SECONDS", "45"))
-        retries = int(os.getenv("OPENAI_MAX_RETRIES", "3"))
-        upload_limit = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
-        text_limit = int(os.getenv("MAX_RESUME_CHARS", "50000"))
-        job_max_age = int(os.getenv("JOB_LISTING_MAX_AGE_DAYS", "30"))
-        adzuna_country_code = os.getenv("ADZUNA_COUNTRY_CODE", "in").strip().lower()
-        provider = os.getenv("AI_PROVIDER", "openai").strip().lower()
-        model = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
-        gemini_model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip()
-        if provider not in {"openai", "gemini"}:
-            raise ValueError("AI_PROVIDER must be either 'openai' or 'gemini'")
+        timeout_str = _get_config("OPENAI_TIMEOUT_SECONDS", "45")
+        retries_str = _get_config("OPENAI_MAX_RETRIES", "3")
+        upload_limit_str = _get_config("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))
+        text_limit_str = _get_config("MAX_RESUME_CHARS", "50000")
+        job_max_age_str = _get_config("JOB_LISTING_MAX_AGE_DAYS", "30")
+        country_str = _get_config("ADZUNA_COUNTRY_CODE", "in")
+
+        timeout = float(timeout_str if timeout_str is not None else "45")
+        retries = int(retries_str if retries_str is not None else "3")
+        upload_limit = int(upload_limit_str if upload_limit_str is not None else str(10 * 1024 * 1024))
+        text_limit = int(text_limit_str if text_limit_str is not None else "50000")
+        job_max_age = int(job_max_age_str if job_max_age_str is not None else "30")
+        adzuna_country_code = (country_str or "in").strip().lower()
+
+        provider_val = _get_config("AI_PROVIDER")
+        if provider_val is not None:
+            provider = provider_val.strip().lower()
+            if provider not in {"openai", "gemini"}:
+                raise ValueError("AI_PROVIDER must be either 'openai' or 'gemini'")
+        else:
+            provider = "openai"
+
+        model_val = _get_config("OPENAI_MODEL")
+        model = model_val.strip() if model_val is not None else "gpt-4o-mini"
+        if not model:
+            raise ValueError("OPENAI_MODEL must not be empty")
+
+        gemini_model_val = _get_config("GEMINI_MODEL")
+        gemini_model = gemini_model_val.strip() if gemini_model_val is not None else "gemini-3.5-flash"
+        if not gemini_model:
+            raise ValueError("GEMINI_MODEL must not be empty")
+
         if not math.isfinite(timeout) or timeout <= 0 or timeout > 300:
             raise ValueError("OPENAI_TIMEOUT_SECONDS must be between 0 and 300")
         if not 0 <= retries <= 3:
@@ -57,22 +95,25 @@ class Settings:
             raise ValueError("JOB_LISTING_MAX_AGE_DAYS must be between 1 and 365")
         if not re.fullmatch(r"[a-z]{2}", adzuna_country_code):
             raise ValueError("ADZUNA_COUNTRY_CODE must be a two-letter country code")
-        if not model:
-            raise ValueError("OPENAI_MODEL must not be empty")
-        if not gemini_model:
-            raise ValueError("GEMINI_MODEL must not be empty")
 
         database_path = Path(
-            os.getenv("SQLITE_DATABASE_PATH", str(PROJECT_ROOT / "data" / "jobs.sqlite3"))
+            _get_config("SQLITE_DATABASE_PATH", str(PROJECT_ROOT / "data" / "jobs.sqlite3")) or ""
         ).expanduser()
         user_database_path = Path(
-            os.getenv("SQLITE_USER_DATABASE_PATH", str(PROJECT_ROOT / "data" / "users.sqlite3"))
+            _get_config("SQLITE_USER_DATABASE_PATH", str(PROJECT_ROOT / "data" / "users.sqlite3")) or ""
         ).expanduser()
+
+        openai_key = (_get_config("OPENAI_API_KEY") or "").strip() or None
+        gemini_key = (_get_config("GEMINI_API_KEY") or "").strip() or None
+        adzuna_id = (_get_config("ADZUNA_APP_ID") or "").strip() or None
+        adzuna_key = (_get_config("ADZUNA_APP_KEY") or "").strip() or None
+        log_level = (_get_config("LOG_LEVEL", "INFO") or "INFO").strip().upper()
+
         return cls(
             ai_provider=provider,
-            openai_api_key=os.getenv("OPENAI_API_KEY", "").strip() or None,
+            openai_api_key=openai_key,
             openai_model=model,
-            gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip() or None,
+            gemini_api_key=gemini_key,
             gemini_model=gemini_model,
             openai_timeout_seconds=timeout,
             openai_max_retries=retries,
@@ -80,9 +121,9 @@ class Settings:
             max_resume_chars=text_limit,
             sqlite_database_path=database_path,
             job_listing_max_age_days=job_max_age,
-            adzuna_app_id=os.getenv("ADZUNA_APP_ID", "").strip() or None,
-            adzuna_app_key=os.getenv("ADZUNA_APP_KEY", "").strip() or None,
+            adzuna_app_id=adzuna_id,
+            adzuna_app_key=adzuna_key,
             adzuna_country_code=adzuna_country_code,
-            log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
+            log_level=log_level,
             sqlite_user_database_path=user_database_path,
         )
