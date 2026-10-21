@@ -1,0 +1,29 @@
+{
+  "summary": "Synthetic early-career candidate with Python project experience.",
+  "technical_skills": [
+    {
+      "name": "Python",
+      "evidence": "Built a Python data project",
+      "inferred": false
+    }
+  ],
+  "soft_skills": [],
+  "experience_assessment": "Project experience demonstrates early-career technical exposure.",
+  "experience_highlights": [
+    "Built a Python data project"
+  ],
+  "learning_suggestions": [
+    "Practice SQL with a small portfolio project."
+  ],
+  "resume_improvements": [
+    {
+      "priority": "medium",
+      "issue": "Project outcomes could be clearer.",
+      "recommendation": "Add a factual outcome if one is available.",
+      "evidence": "Built a Python data project"
+    }
+  ],
+  "caveats": [
+    "This synthetic analysis is provided for tests only."
+  ]
+}

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.venv*/
+venv*/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Sensitive/runtime data
+*.sqlite
+*.sqlite3
+*.db
+*.log
+*.pdf
+*.docx
+!tests/fixtures/sample_resume.pdf
+!tests/fixtures/sample_resume.docx
+!PRD.md
+!SOFTWARE_ARCH.md
+!PROJECT_STRUCTURE.md
+
+# Build output
+build/
+dist/
