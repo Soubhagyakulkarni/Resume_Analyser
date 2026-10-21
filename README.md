@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🤖 AI Resume Analyser
+# AI Resume Analyser
 
 **Upload your resume. Get AI-powered career insights. Download your report.**
 
@@ -12,55 +12,28 @@
 [![Tests](https://img.shields.io/badge/Tests-177%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-### [🚀 Try the Live App →](https://your-app.streamlit.app)
-
-*Replace the link above with your actual Streamlit Cloud URL*
+### [Live App](https://resumeanalyser-mrxhennyfuc9femfqvernz.streamlit.app/)
 
 </div>
 
 ---
 
-## 📌 What Is This?
+## What Is This?
 
-**AI Resume Analyser** is a full-stack AI-powered career tool that helps job seekers — especially **freshers and graduates** — understand their resume's strengths and gaps, discover matched job opportunities, and build a professional ATS-ready resume from scratch.
-
-It uses **Google Gemini AI** to deeply analyse your resume text and generate evidence-backed career insights without fabricating information or making hiring decisions.
-
----
-
-## ✨ Features At a Glance
-
-| Feature | Description |
-|---|---|
-| 📄 **Resume Analysis** | Upload PDF/DOCX or paste text. Gemini AI extracts skills, experience signals, and career level |
-| 🎯 **ATS Score & Insights** | Get a career snapshot with ATS alignment tips, improvement checklist, and actionable next steps |
-| 💼 **Job Recommendations** | Matched live jobs from Adzuna API + curated seed catalog — sorted by skill overlap with your resume |
-| 🔍 **JD Match Analyser** | Paste any job description to get an instant match score, missing keywords, and resume rewrite suggestions |
-| 📈 **Skill Development Plan** | Tiered learning plan ("Start Now", "Next", "Optional") with curated resource links based on real job demand |
-| ✅ **Resume Quality Checks** | Deterministic ATS-readability checks for headings, measurable outcomes, keyword presence |
-| 🛠️ **Resume Builder** | Build a fresh professional resume from guided fields — generates a clean PDF with clickable links |
-| 📊 **Downloadable PDF Report** | Full career report with insights, matched jobs, skill plan, and quality checks |
-| 👤 **User Authentication** | Register/Login to save your session. Passwords are securely hashed |
-| 🔄 **Auto Job Sync** | Job catalog auto-populates from Adzuna on every analysis — no manual setup needed |
+Streamlit application for evidence-grounded resume analysis, skill identification,
+job recommendations from an authorized SQLite catalog, and downloadable PDF reports.
+The system provides career-development support; it does not make hiring decisions.
 
 ---
 
-## 🖥️ Tech Stack
+## Requirements
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | Streamlit (Python UI framework) |
-| **AI Provider** | Google Gemini API (`gemini-3.5-flash`) |
-| **Database** | SQLite (job catalog + user accounts) |
-| **Job Data** | Adzuna Jobs API + curated seed catalog |
-| **PDF Generation** | ReportLab |
-| **Resume Parsing** | PyMuPDF (PDF), python-docx (DOCX) |
-| **Testing** | pytest — 177 tests, zero API calls |
-| **Deployment** | Streamlit Community Cloud (free tier) |
+- Python 3.11 or newer
+- An API key for the selected AI provider (OpenAI or Gemini)
 
 ---
 
-## 🚀 How to Run Locally
+## How to Run Locally
 
 ### Step 1 — Clone the repository
 
@@ -101,7 +74,7 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-Now open `.env` and fill in your keys:
+Open `.env` and fill in your keys:
 
 ```env
 AI_PROVIDER=gemini
@@ -113,9 +86,14 @@ ADZUNA_APP_KEY=your_adzuna_app_key
 ADZUNA_COUNTRY_CODE=in
 ```
 
-> 💡 **Get a free Gemini API key** at [aistudio.google.com](https://aistudio.google.com/app/apikey)  
-> 💡 **Get free Adzuna credentials** at [developer.adzuna.com](https://developer.adzuna.com/signup)  
-> ⚠️ Never commit your `.env` file — it is already in `.gitignore`
+Get a free Gemini API key at [aistudio.google.com](https://aistudio.google.com/app/apikey).  
+Get free Adzuna credentials at [developer.adzuna.com](https://developer.adzuna.com/signup).  
+Never commit your `.env` file — it is already in `.gitignore`.
+
+For Gemini, set `AI_PROVIDER=gemini` and `GEMINI_API_KEY` in the ignored `.env` file.
+For OpenAI, set `AI_PROVIDER=openai` and `OPENAI_API_KEY`. The selected provider and
+key must match; a Gemini key cannot authenticate to OpenAI and vice versa. Never put
+a real key in `.env.example`, commit `.env`, or place secrets in `.streamlit/config.toml`.
 
 ### Step 5 — Run the app
 
@@ -129,16 +107,21 @@ ADZUNA_COUNTRY_CODE=in
 streamlit run app/main.py
 ```
 
-The app will open at **[http://localhost:8501](http://localhost:8501)** 🎉
+The app will open at [http://localhost:8501](http://localhost:8501).
+
+After changing `.env`, stop and restart Streamlit so the new configuration is loaded.
+If the selected provider rejects the configured key, verify that it is active and
+matches `AI_PROVIDER`; an API key that is syntactically present may still be
+expired, revoked, or invalid for the configured provider account.
 
 ---
 
-## ☁️ Deploying to Streamlit Cloud (Free)
+## Deploying to Streamlit Cloud (Free)
 
-1. Push this repo to your GitHub account
-2. Go to [share.streamlit.io](https://share.streamlit.io) → **New app**
-3. Select your repo → Branch: `main` → Main file: `app/main.py`
-4. Click **Deploy** — wait ~2 minutes
+1. Push this repo to your GitHub account.
+2. Go to [share.streamlit.io](https://share.streamlit.io) → **New app**.
+3. Select your repo → Branch: `main` → Main file: `app/main.py`.
+4. Click **Deploy** — wait about 2 minutes.
 5. Go to **Settings → Secrets** and paste:
 
 ```toml
@@ -151,19 +134,85 @@ ADZUNA_APP_KEY = "your_app_key"
 ADZUNA_COUNTRY_CODE = "in"
 ```
 
-6. Click **Save** — app reboots automatically ✅
+6. Click **Save** — the app reboots automatically.
 
-> **Future updates:** Just `git push origin main` and Streamlit Cloud redeploys automatically!
+Future updates: just `git push origin main` and Streamlit Cloud redeploys automatically.
 
 ---
 
-## 🧪 Running Tests
+## App Features
+
+The application accepts pasted resume text or PDF/DOCX files and refuses to analyze
+a resume without a key for the selected provider. Resume bytes and analysis results
+are held transiently for the active Streamlit session; the app does not persist them.
+Resume text is sent to the configured AI provider only after the user accepts the
+processing notice. Review provider data-processing terms and applicable privacy
+requirements before deployment.
+
+The landing page includes a synthetic sample resume for demonstration. Loading it
+only fills the paste-text field; it does not submit or analyze anything. The same
+explicit consent is required before any resume text — synthetic or user provided —
+is sent to the configured provider. Consent is requested again for each new analysis attempt.
+
+Career stage, primary goal, preferred role, and preferred location are optional.
+They are held in the active Streamlit session only, can be skipped, and are not
+stored in SQLite. Role/location preferences also filter recommendations.
+
+The **Resume builder** workspace lets users create a resume from guided fields or
+edit text extracted locally from an existing PDF/DOCX (pasted text is also
+supported). The guided builder separates profile, experience/projects, and
+education/skills, provides a transparent completeness checklist, and offers
+Classic, Modern, and Compact PDF layouts with a live preview. The checklist is
+not an ATS score. Use the **Review & export** step to see the finished resume
+and select **Download PDF**. The generated order is Profile, Experience,
+Projects, Education, Skills, then Certifications or activities. This workspace
+does not call an AI provider or save resume content to SQLite; users should
+include only accurate information.
+
+---
+
+## Job Catalog
+
+The job catalog is automatically populated from Adzuna and a curated seed catalog
+on every app startup — no manual import is needed when running on Streamlit Cloud.
+
+To refresh the catalog manually from Adzuna, [register for an Adzuna developer account](https://developer.adzuna.com/signup)
+to obtain an `app_id` and `app_key`, place the resulting `ADZUNA_APP_ID` and
+`ADZUNA_APP_KEY` in the ignored `.env` file, then run:
+
+```powershell
+python scripts\refresh_adzuna_catalog.py --what "graduate jobs" --where "India" --pages 3
+```
+
+The refresh defaults to the India country endpoint (`ADZUNA_COUNTRY_CODE=in`).
+Only set the Adzuna credentials in `.env`; never paste them into chat, source
+code, or logs. A failed or empty API response does not erase the existing
+catalog.
+
+Recommendations include only listings posted within the last 30 days by default.
+Configure `JOB_LISTING_MAX_AGE_DAYS` in `.env` to a value from 1 to 365; older or
+future-dated listings are excluded.
+
+On the results page, optional target-role and preferred-location filters narrow both
+matched recommendations and browse-only current listings. Separate role keywords with
+commas (any keyword may match the job title); location is matched against the listing's
+location. Leaving either field blank does not filter by it. Use **Apply job filters**
+to update the list; this does not rerun AI analysis.
+
+Results also include a role-linked skill-development plan. Skills are prioritized by
+how often they appear in the filtered current listings, with curated links for a
+limited set of skills. A skill not found in the resume is not proof that the user lacks it.
+
+---
+
+## Tests
 
 ```bash
 pytest
 ```
 
-All 177 tests run with **zero API calls** — they use synthetic data, temporary databases, and mocked AI responses.
+Tests use synthetic content, temporary SQLite databases, and fake AI dependencies;
+they make no paid API calls.
 
 ```
 177 passed in 8.56s
@@ -171,51 +220,39 @@ All 177 tests run with **zero API calls** — they use synthetic data, temporary
 
 ---
 
-## 📁 Project Structure
+## Analysis Output
 
-```
-Resume_Analyser/
-├── app/
-│   ├── main.py               # Streamlit entry point
-│   ├── config/settings.py    # Env config (reads .env + Streamlit Secrets)
-│   ├── components/           # UI components (analysis, jobs, skills, etc.)
-│   └── pages/                # Page views (analyze, results, builder, login)
-├── services/                 # Business logic (analysis, recommendations, etc.)
-├── integrations/             # AI gateways (Gemini, OpenAI) + Adzuna client
-├── models/                   # Data models (Job, Resume, Analysis)
-├── repositories/             # SQLite repositories
-├── reports/                  # PDF report and resume renderers
-├── parsers/                  # Resume file parsing (PDF, DOCX, TXT)
-├── scripts/                  # Job catalog management scripts
-├── data/
-│   └── seed_catalog.json     # 20 curated seed job listings (auto-loaded)
-├── tests/                    # 177 unit, integration, contract, and UI tests
-├── .env.example              # Environment variable template
-├── requirements.txt          # Production dependencies
-└── README.md
-```
+The analysis includes a resume summary, evidence-backed technical and soft skills,
+an experience assessment, job recommendations from the authorized catalog, skills
+not found in the resume for those roles, learning suggestions, and resume
+improvements. It also includes a role-linked skill development plan and transparent
+ATS-friendly resume checks. Missing skills are phrased as *not found in the submitted
+resume* and are not claims about what the person can or cannot do.
 
 ---
 
-## 🛡️ Privacy & Security
+## Operational Notes
 
-- ✅ Resume text is sent to Gemini **only after explicit user consent**
-- ✅ No resume content is stored in the database — session only
-- ✅ Passwords are securely hashed (never stored as plaintext)
-- ✅ API keys are read from environment / Streamlit Secrets — never hardcoded
-- ✅ All job application URLs validated as real HTTPS links
+- The supported resume formats are PDF and DOCX (maximum 100 pages); scanned/image-only PDFs may not contain extractable text and are rejected.
+- Configure provider, model, upload limits, timeouts, job-listing freshness, database location, and logging with the variables in `.env.example`.
+- `requirements.txt` contains the production dependencies.
+- See [PRD.md](PRD.md), [SOFTWARE_ARCH.md](SOFTWARE_ARCH.md), and [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) for product and architecture details.
 
 ---
 
-## 📄 License
+## Privacy & Security
 
-This project is licensed under the **MIT License** — use it, fork it, build on it.
+- Resume text is sent to Gemini only after explicit user consent.
+- No resume content is stored in the database — session only.
+- Passwords are securely hashed; never stored as plaintext.
+- API keys are read from environment / Streamlit Secrets — never hardcoded.
+- All job application URLs validated as real HTTPS links.
 
 ---
 
 <div align="center">
 
-Built with ❤️ by **Soubhagya Kulkarni**
+Built by **Soubhagya Kulkarni**
 
 [![GitHub](https://img.shields.io/badge/GitHub-Soubhagyakulkarni-181717?style=flat-square&logo=github)](https://github.com/Soubhagyakulkarni)
 
