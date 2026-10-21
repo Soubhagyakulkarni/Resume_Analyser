@@ -201,6 +201,17 @@ def _refresh_recommendation_state(
     correlation_id = correlation_id or new_correlation_id()
     st.session_state[CORRELATION_ID_KEY] = correlation_id
     try:
+        from app.config.settings import Settings
+        from services.catalog_seeder import ensure_job_catalog
+
+        what_term = preferences.role_keywords[0] if preferences.role_keywords else None
+        ensure_job_catalog(
+            recommendation_service._repository,
+            Settings.from_environment(),
+            force_refresh=True,
+            search_query=what_term,
+            location_query=preferences.location or None,
+        )
         recommendations = recommendation_service.recommend(analysis, preferences=preferences)
         catalog_status = recommendation_service.catalog_status(preferences)
         browse_jobs = recommendation_service.current_jobs(limit=8, preferences=preferences)

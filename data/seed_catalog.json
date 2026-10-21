@@ -1,0 +1,182 @@
+[
+  {
+    "id": "seed-job-001",
+    "title": "Software Engineer - Backend",
+    "description": "Design and build scalable backend services and REST APIs using Python and cloud infrastructure. Collaborate with cross-functional teams to deliver reliable software features.",
+    "required_skills": ["Python", "SQL", "Git", "Docker", "AWS"],
+    "location": "Bengaluru, Karnataka, India",
+    "application_url": "https://www.adzuna.in/details/seed-001",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-002",
+    "title": "Full Stack Developer",
+    "description": "Develop and maintain robust web applications using React on the frontend and Python or Node.js on the backend. Implement responsive UI and secure REST APIs.",
+    "required_skills": ["JavaScript", "React", "Python", "SQL", "HTML", "CSS", "Git"],
+    "location": "Hyderabad, Telangana, India",
+    "application_url": "https://www.adzuna.in/details/seed-002",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-003",
+    "title": "Python Developer",
+    "description": "Develop backend applications, automation workflows, and microservices using modern Python frameworks like FastAPI and Django. Write unit tests and maintain high test coverage.",
+    "required_skills": ["Python", "Django", "FastAPI", "SQL", "Docker", "Git"],
+    "location": "Pune, Maharashtra, India",
+    "application_url": "https://www.adzuna.in/details/seed-003",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-004",
+    "title": "Data Scientist",
+    "description": "Extract insights from complex business datasets, train predictive models, and build machine learning pipelines using Python and SQL. Present findings to stakeholders.",
+    "required_skills": ["Python", "Machine Learning", "Data Analysis", "SQL", "Tableau"],
+    "location": "Bengaluru, Karnataka, India",
+    "application_url": "https://www.adzuna.in/details/seed-004",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-005",
+    "title": "Data Analyst",
+    "description": "Analyze large volumes of company data, create interactive Power BI dashboards, and write complex SQL queries to drive strategic business decisions.",
+    "required_skills": ["SQL", "Excel", "Python", "Data Analysis", "Power BI", "Tableau"],
+    "location": "Mumbai, Maharashtra, India",
+    "application_url": "https://www.adzuna.in/details/seed-005",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-006",
+    "title": "Machine Learning Engineer",
+    "description": "Deploy, monitor, and scale machine learning and deep learning models in production environments. Build robust feature stores and automated model training pipelines.",
+    "required_skills": ["Python", "Machine Learning", "Docker", "Git", "AWS", "SQL"],
+    "location": "Bengaluru, Karnataka, India",
+    "application_url": "https://www.adzuna.in/details/seed-006",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-007",
+    "title": "Frontend Developer",
+    "description": "Create responsive, accessible, and fast web user interfaces using modern React, TypeScript, and CSS. Collaborate closely with product designers.",
+    "required_skills": ["JavaScript", "TypeScript", "React", "HTML", "CSS", "Git"],
+    "location": "Remote, India",
+    "application_url": "https://www.adzuna.in/details/seed-007",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-008",
+    "title": "DevOps Engineer",
+    "description": "Build and maintain continuous integration and deployment pipelines. Manage containerized microservices on Kubernetes and maintain cloud infrastructure.",
+    "required_skills": ["Docker", "Kubernetes", "AWS", "Git", "Linux", "Python"],
+    "location": "Bengaluru, Karnataka, India",
+    "application_url": "https://www.adzuna.in/details/seed-008",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-009",
+    "title": "Java Backend Developer",
+    "description": "Build high-throughput, low-latency microservices using Java and Spring Boot. Design relational database schemas and optimize query performance.",
+    "required_skills": ["Java", "SQL", "Git", "Docker", "Agile"],
+    "location": "Chennai, Tamil Nadu, India",
+    "application_url": "https://www.adzuna.in/details/seed-009",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-010",
+    "title": "Cloud Engineer",
+    "description": "Architect and manage secure, scalable multi-cloud infrastructure on AWS and GCP. Automate deployment workflows and ensure high system availability.",
+    "required_skills": ["AWS", "GCP", "Docker", "Linux", "Python", "Kubernetes"],
+    "location": "Delhi NCR, India",
+    "application_url": "https://www.adzuna.in/details/seed-010",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-011",
+    "title": "Data Engineer",
+    "description": "Design and implement scalable data ingestion pipelines, ETL workflows, and data warehousing solutions using Python and SQL.",
+    "required_skills": ["Python", "SQL", "Docker", "AWS", "Git"],
+    "location": "Bengaluru, Karnataka, India",
+    "application_url": "https://www.adzuna.in/details/seed-011",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-012",
+    "title": "QA Automation Engineer",
+    "description": "Develop and maintain automated test suites for web applications and backend APIs. Integrate automated regression tests into CI/CD pipelines.",
+    "required_skills": ["Python", "Java", "SQL", "Git", "Agile"],
+    "location": "Pune, Maharashtra, India",
+    "application_url": "https://www.adzuna.in/details/seed-012",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-013",
+    "title": "Graduate Software Engineer Trainee",
+    "description": "Entry-level engineering role for fresh graduates. Participate in a structured technical training program covering software engineering fundamentals, algorithms, and web technologies.",
+    "required_skills": ["Python", "Java", "SQL", "Git", "Communication"],
+    "location": "Bengaluru, Karnataka, India",
+    "application_url": "https://www.adzuna.in/details/seed-013",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-014",
+    "title": "Associate Product Manager",
+    "description": "Work with cross-functional engineering, design, and business teams to define product features, track user metrics, and prioritize agile sprint backlogs.",
+    "required_skills": ["Project Management", "Agile", "Scrum", "Communication", "Leadership", "Data Analysis"],
+    "location": "Mumbai, Maharashtra, India",
+    "application_url": "https://www.adzuna.in/details/seed-014",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-015",
+    "title": "Cybersecurity Analyst",
+    "description": "Monitor organizational systems for vulnerabilities, conduct threat analyses, and maintain security compliance across servers and applications.",
+    "required_skills": ["Linux", "Python", "Git", "Communication"],
+    "location": "Hyderabad, Telangana, India",
+    "application_url": "https://www.adzuna.in/details/seed-015",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-016",
+    "title": "Business Intelligence Analyst",
+    "description": "Translate complex raw data into compelling dashboards and executive reports. Work closely with business units to understand KPIs and report metrics.",
+    "required_skills": ["Power BI", "Tableau", "SQL", "Excel", "Data Analysis"],
+    "location": "Bengaluru, Karnataka, India",
+    "application_url": "https://www.adzuna.in/details/seed-016",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-017",
+    "title": "AI / GenAI Applications Engineer",
+    "description": "Build intelligent LLM and generative AI applications using Python, prompt engineering, vector databases, and API integrations.",
+    "required_skills": ["Python", "Machine Learning", "Git", "Docker", "SQL"],
+    "location": "Bengaluru, Karnataka, India",
+    "application_url": "https://www.adzuna.in/details/seed-017",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-018",
+    "title": "System Administrator / Cloud Ops",
+    "description": "Maintain Linux production servers, configure networking and firewalls, and automate routine operational tasks with shell scripts and Python.",
+    "required_skills": ["Linux", "AWS", "Python", "Docker", "Git"],
+    "location": "Delhi, India",
+    "application_url": "https://www.adzuna.in/details/seed-018",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-019",
+    "title": "Mobile App Developer",
+    "description": "Develop and maintain cross-platform or native mobile applications. Integrate REST APIs and ensure smooth 60fps animations and offline caching.",
+    "required_skills": ["JavaScript", "React", "Git", "SQL"],
+    "location": "Chennai, Tamil Nadu, India",
+    "application_url": "https://www.adzuna.in/details/seed-019",
+    "source": "Verified Career Network"
+  },
+  {
+    "id": "seed-job-020",
+    "title": "Site Reliability Engineer (SRE)",
+    "description": "Champion system reliability, uptime, and performance. Implement telemetry, monitoring, alerting, and automated failover recovery mechanisms.",
+    "required_skills": ["Linux", "Python", "Kubernetes", "Docker", "AWS", "Git"],
+    "location": "Bengaluru, Karnataka, India",
+    "application_url": "https://www.adzuna.in/details/seed-020",
+    "source": "Verified Career Network"
+  }
+]

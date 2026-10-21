@@ -188,6 +188,13 @@ def render_analyze_page(
             st.session_state[JOB_SEARCH_PREFERENCES_KEY] = preferences
 
             try:
+                from app.config.settings import Settings
+                from services.catalog_seeder import ensure_job_catalog
+
+                ensure_job_catalog(
+                    recommendation_service._repository,
+                    Settings.from_environment(),
+                )
                 recommendations = recommendation_service.recommend(
                     analysis, preferences=preferences
                 )

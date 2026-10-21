@@ -31,6 +31,7 @@ from repositories.sqlite_job_repository import SQLiteJobRepository
 from repositories.sqlite_user_repository import SQLiteUserRepository
 from services.analysis_service import AnalysisService
 from services.auth_service import AuthService
+from services.catalog_seeder import ensure_job_catalog
 from services.recommendation_service import RecommendationService
 from services.report_service import ReportService
 
@@ -57,6 +58,7 @@ def _build_services() -> ApplicationServices:
         gateway = OpenAIAnalysisGateway(settings)
     job_repository = SQLiteJobRepository(settings.sqlite_database_path)
     user_repository = SQLiteUserRepository(settings.sqlite_user_database_path)
+    ensure_job_catalog(job_repository, settings)
     return ApplicationServices(
         resume=ResumeService(settings.max_upload_bytes, settings.max_resume_chars),
         analysis=AnalysisService(gateway) if gateway is not None else None,

@@ -54,6 +54,19 @@ _KNOWN_SKILLS = (
     "CSS",
     "Go",
     "Rust",
+    "Pandas",
+    "NumPy",
+    "TensorFlow",
+    "PyTorch",
+    "Spring Boot",
+    "REST APIs",
+    "PostgreSQL",
+    "MongoDB",
+    "MySQL",
+    "DevOps",
+    "CI/CD",
+    "Selenium",
+    "Testing",
 )
 
 
