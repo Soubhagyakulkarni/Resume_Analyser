@@ -38,8 +38,8 @@ class GeminiAnalysisGateway:
         """Generate analysis and validate all returned fields locally."""
         request_content = json.dumps({"resume_text": resume_text}, ensure_ascii=False)
         models_to_try = [self._model]
-        if self._model != "gemini-3.5-flash":
-            models_to_try.append("gemini-3.5-flash")
+        if self._model != "gemini-2.0-flash":
+            models_to_try.append("gemini-2.0-flash")
 
         response = None
         last_exc: Exception | None = None
@@ -62,10 +62,11 @@ class GeminiAnalysisGateway:
                     status_code = getattr(exc, "code", None)
                     error_message = str(getattr(exc, "message", "")).casefold()
                     logger.warning(
-                        "Gemini request failed model=%s status_code=%s attempt=%d",
+                        "Gemini request failed model=%s status_code=%s attempt=%d message=%s",
                         current_model,
                         status_code if isinstance(status_code, int) else "unknown",
                         attempt + 1,
+                        error_message[:200],
                     )
                     invalid_api_key = status_code == 400 and (
                         "api key" in error_message
@@ -75,7 +76,13 @@ class GeminiAnalysisGateway:
                         raise ProviderConfigurationError() from exc
                     if status_code == 429:
                         raise ProviderRateLimitError() from exc
-                    if isinstance(status_code, int) and (status_code >= 500 or status_code == 404):
+                    is_server_err = (
+                        isinstance(exc, errors.ServerError)
+                        or (isinstance(status_code, int) and (status_code >= 500 or status_code == 404))
+                        or "overloaded" in error_message
+                        or "unavailable" in error_message
+                    )
+                    if is_server_err:
                         if attempt < self._max_retries:
                             time.sleep(min(2 * (attempt + 1), 6))
                             continue

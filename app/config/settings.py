@@ -79,9 +79,11 @@ class Settings:
             raise ValueError("OPENAI_MODEL must not be empty")
 
         gemini_model_val = _get_config("GEMINI_MODEL")
-        gemini_model = gemini_model_val.strip() if gemini_model_val is not None else "gemini-3.5-flash"
+        gemini_model = gemini_model_val.strip() if gemini_model_val is not None else "gemini-2.0-flash"
         if not gemini_model:
             raise ValueError("GEMINI_MODEL must not be empty")
+        if gemini_model in {"gemini-3.5-flash", "gemini-3.8-flash"}:
+            gemini_model = "gemini-2.0-flash"
 
         if not math.isfinite(timeout) or timeout <= 0 or timeout > 300:
             raise ValueError("OPENAI_TIMEOUT_SECONDS must be between 0 and 300")

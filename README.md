@@ -79,7 +79,7 @@ Open `.env` and fill in your keys:
 ```env
 AI_PROVIDER=gemini
 GEMINI_API_KEY=your_actual_gemini_api_key_here
-GEMINI_MODEL=gemini-3.5-flash
+GEMINI_MODEL=gemini-2.0-flash
 
 ADZUNA_APP_ID=your_adzuna_app_id
 ADZUNA_APP_KEY=your_adzuna_app_key
@@ -127,7 +127,7 @@ expired, revoked, or invalid for the configured provider account.
 ```toml
 AI_PROVIDER = "gemini"
 GEMINI_API_KEY = "your_actual_key_here"
-GEMINI_MODEL = "gemini-3.5-flash"
+GEMINI_MODEL = "gemini-2.0-flash"
 
 ADZUNA_APP_ID = "your_app_id"
 ADZUNA_APP_KEY = "your_app_key"
