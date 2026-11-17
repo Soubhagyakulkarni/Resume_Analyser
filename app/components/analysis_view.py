@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from html import escape
 
 import streamlit as st
@@ -29,6 +30,7 @@ def render_analysis(
     profile: CareerProfile | None = None,
     report_bytes: bytes | None = None,
     resume_text: str = "",
+    embedder: Callable[[str], list[float]] | None = None,
 ) -> None:
     """Render detailed results in six tabs below the Career Snapshot."""
     tab_insights, tab_jd, tab_jobs, tab_skills, tab_checks, tab_report = st.tabs(
@@ -46,7 +48,7 @@ def render_analysis(
         _render_insights_tab(analysis, profile)
 
     with tab_jd:
-        render_jd_match_tab(analysis, resume_text)
+        render_jd_match_tab(analysis, resume_text, embedder=embedder)
 
     with tab_jobs:
         _render_jobs_tab(recommendations, catalog_status, browse_jobs, preferences)

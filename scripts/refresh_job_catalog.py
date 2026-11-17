@@ -1,4 +1,4 @@
-"""Import an authorized CSV job catalog into the SQLite catalog."""
+"""Import an authorized CSV job catalog into Supabase PostgreSQL."""
 
 import argparse
 import csv
@@ -7,10 +7,12 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
 
+from supabase import create_client
+
 from config.logging_config import configure_logging
 from config.settings import Settings
 from models.job import Job
-from repositories.sqlite_job_repository import SQLiteJobRepository
+from repositories.supabase_job_repository import SupabaseJobRepository
 from utils.url_validation import is_placeholder_application_url
 
 REQUIRED_COLUMNS = {
@@ -76,8 +78,13 @@ def main() -> None:
     args = parser.parse_args()
     configure_logging()
     settings = Settings.from_environment()
+    if not settings.supabase_url or not settings.supabase_service_role_key:
+        raise ValueError("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the local .env file.")
     jobs = load_jobs(args.csv_file)
-    SQLiteJobRepository(settings.sqlite_database_path).replace_jobs(jobs)
+    repository = SupabaseJobRepository(
+        create_client(settings.supabase_url, settings.supabase_service_role_key)
+    )
+    repository.replace_jobs(jobs)
     logging.getLogger(__name__).info("Imported %d authorized job listings", len(jobs))
 
 

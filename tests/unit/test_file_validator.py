@@ -61,3 +61,26 @@ def test_resume_service_extracts_synthetic_docx_text():
     fixture = Path(__file__).parents[1] / "fixtures" / "sample_resume.docx"
     parsed = ResumeService(100_000, 1000).parse(fixture.name, fixture.read_bytes())
     assert "Python data project" in parsed.text
+
+
+def test_resume_service_ocr_fallback_for_scanned_pdf():
+    from pypdf import PdfWriter
+
+    writer = PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    stream = BytesIO()
+    writer.write(stream)
+    blank_pdf = stream.getvalue()
+
+    # Without OCR fallback -> raises error
+    service_no_ocr = ResumeService(100_000, 1000)
+    with pytest.raises(InvalidResumeError, match="No readable text"):
+        service_no_ocr.parse("scanned.pdf", blank_pdf)
+
+    # With OCR fallback -> successfully extracts OCR text
+    service_with_ocr = ResumeService(
+        100_000, 1000, ocr_extractor=lambda content: "Scanned Senior Engineer Resume"
+    )
+    parsed = service_with_ocr.parse("scanned.pdf", blank_pdf)
+    assert parsed.file_type == "pdf"
+    assert parsed.text == "Scanned Senior Engineer Resume"

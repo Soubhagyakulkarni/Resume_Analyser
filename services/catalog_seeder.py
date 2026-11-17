@@ -1,4 +1,4 @@
-"""Automatic seeder and sync service for the SQLite job catalog."""
+"""Automatic seeder and sync service for the PostgreSQL job catalog."""
 
 from __future__ import annotations
 
@@ -10,14 +10,14 @@ from pathlib import Path
 from app.config.settings import Settings
 from integrations.adzuna_job_client import AdzunaJobClient
 from models.job import Job
-from repositories.sqlite_job_repository import SQLiteJobRepository
+from services.ports import JobRepository
 
 logger = logging.getLogger(__name__)
 SEED_CATALOG_PATH = Path(__file__).resolve().parents[1] / "data" / "seed_catalog.json"
 
 
 def ensure_job_catalog(
-    repository: SQLiteJobRepository,
+    repository: JobRepository,
     settings: Settings,
     force_refresh: bool = False,
     search_query: str | None = None,

@@ -4,9 +4,9 @@
 
 | Document detail | Value |
 |---|---|
-| Status | **Live – v1.1** |
-| Version | 1.1 |
-| Last updated | 2026-10-21 |
+| Status | **v1.1 live; Supabase migration in progress** |
+| Version | 1.2 |
+| Last updated | 2026-11-16 |
 | Related product document | [PRD.md](./PRD.md) |
 | Architecture style | Modular monolith |
 
@@ -16,7 +16,7 @@
 
 The system accepts a resume (PDF, DOCX, or TXT), extracts and evaluates its content via Google Gemini, identifies role-relevant skills, matches against any pasted job description, recommends jobs from the catalog, and produces a downloadable analysis report. It supports the individual-user MVP in the PRD; it is not a hiring decision system and does not include counselor accounts, institution dashboards, or automated job applications.
 
-The stack is Streamlit, Python, Google Gemini (primary AI provider, with OpenAI as fallback), Plotly (visualisation), SQLite, and pytest. A modular monolith keeps deployment and operations manageable for an initial release while maintaining boundaries that permit components to be replaced as usage grows.
+The stack is Streamlit, Python, Google Gemini/OpenAI, Plotly, Supabase Auth, Supabase-managed PostgreSQL, and pytest. A modular monolith keeps deployment and operations manageable while retaining clear boundaries between application services and external providers.
 
 ### 1.2 High-level architecture
 
@@ -40,7 +40,8 @@ flowchart LR
         UR --> REPORT[PDF report renderer]
     end
 
-    REPO --> DB[(SQLite job catalog)]
+    REPO --> DB[(Supabase PostgreSQL)]
+    UI -->|Email/password Auth| AUTH[Supabase Auth]
     OPENAI -->|TLS API request; consented resume content| GPT[OpenAI GPT API]
     GPT -->|Structured model response| OPENAI
     GEMINI -->|TLS API request; consented resume content| GOOGLE[Google Gemini API]
@@ -58,15 +59,15 @@ flowchart LR
 - The selected Gemini or OpenAI adapter is the only component that knows its provider SDK/API details. Gemini (`gemini-flash-latest`) is the default provider.
 - The JD matcher (`services/jd_matcher.py`) performs deterministic keyword extraction, match scoring, and structural rewrite suggestions without calling the AI provider.
 - Plotly renders the skills bar chart client-side inside Streamlit.
-- SQLite stores the normalized, curated job catalog and its source/freshness metadata. The MVP does not persist raw resumes or analysis output by default; these are processed for the current session and held only as long as required to render results and the report.
+- Supabase PostgreSQL stores the authorized job catalog. Supabase Auth manages email/password accounts, email confirmation, and the minimal display metadata supplied at signup. The app does not persist raw resumes or analysis output by default; those remain in the active Streamlit session.
 - PDF reports are generated on demand and offered as a download. They are not stored server-side by default.
-- Configuration and secrets are supplied at runtime; they are not stored in source code or the SQLite database.
+- Configuration and secrets are supplied at runtime. The service-role key is server-only and must never be exposed to browser code.
 
 ### 1.3 Deployment view
 
-Deploy the application as a single Streamlit service behind a TLS-terminating reverse proxy or managed ingress. Store the SQLite catalog on a persistent local volume with restricted filesystem permissions and scheduled, access-controlled backups. Package the Python application and its pinned dependencies in a reproducible deployment artifact.
+Deploy the application as a Streamlit service and use Supabase-managed PostgreSQL backups and access controls. Store the Supabase URL, anon key, and service-role key in the deployment secret manager; the service-role key is restricted to server-side use.
 
-The initial deployment is a single application instance. SQLite is appropriate for a modest, single-writer workload; it is not a shared database for horizontally scaled application replicas on unrelated local disks. Before scaling beyond this deployment shape, measure contention and move the repository adapter to a server database such as PostgreSQL. The application and domain interfaces should not depend on SQLite-specific SQL.
+Supabase PostgreSQL is the shared database for the job catalog. Row-level security protects profile reads, and the catalog refresh function is executable only with the service role. The app remains horizontally deployable without local-disk database state.
 
 ### 1.4 Storage and retention decisions
 
@@ -75,11 +76,12 @@ The initial deployment is a single application instance. SQLite is appropriate f
 | Uploaded resume bytes | Validate and parse in memory; enforce size limits; discard after request/session no longer needs it | No |
 | Extracted resume text | Kept only for the active analysis workflow; never written to logs | No |
 | Analysis and generated suggestions | Held in Streamlit session state only as long as needed to display/download results | No by default |
-| Job listings and source metadata | Normalized records from an authorized curated/licensed source | SQLite |
+| Job listings and source metadata | Normalized records from an authorized curated/licensed source | Supabase PostgreSQL |
+| Authentication credentials | Email/password authentication managed by Supabase Auth | Supabase Auth |
 | API key and runtime secrets | Environment injection or deployment secret manager | No application database |
 | Downloadable report | Generated in memory for the download response | No |
 
-The PRD leaves accounts, retention, and job-source decisions open. Before launch, product and privacy owners must approve the user-facing disclosure, exact session/retention behavior, authorized job source and refresh process, and any model-provider data-processing terms. If persistent user analyses are later required, add explicit consent, authentication/authorization, deletion workflows, retention enforcement, migrations, and access auditing before storing them.
+Authentication is optional; guest analysis remains available. Supabase Auth manages email/password accounts and email confirmation for new accounts. Profiles are limited to display metadata. Before launch, approve the user-facing disclosure, exact session/retention behavior, authorized job source and refresh process, and model-provider data-processing terms. If persistent user analyses are later required, add explicit consent, authorization, deletion workflows, retention enforcement, and access auditing before storing them.
 
 ## 2. Component Diagram
 
@@ -115,7 +117,7 @@ flowchart TB
         FILES[PDF/DOCX/TXT parser adapter]
         GEMADAPT[Gemini client adapter]
         GPT[OpenAI GPT client adapter]
-        JOBREPO[SQLite job repository]
+        JOBREPO[Supabase PostgreSQL repository]
         REPORT[PDF renderer]
         PLOTLY[Plotly skills chart]
     end
@@ -146,7 +148,7 @@ flowchart TB
 | OpenAI client adapter (fallback) | Same contract as Gemini adapter, for GPT models when configured via `AI_PROVIDER=openai`. |
 | JD matcher service | Deterministic keyword extraction from pasted JD text, match scoring, and structural rewrite suggestions. No AI calls — purely regex + set intersection. |
 | Domain services | Define evidence-grounded analysis contracts, compare resume evidence to job requirements, identify gaps, and ensure recommendations do not claim a user lacks an unmentioned skill. |
-| SQLite job repository | Query active, authorized listings and source metadata using parameterized SQL; provide catalog freshness and source status. |
+| Supabase job repository | Query authorized PostgreSQL listings and atomically refresh the catalog through a service-role-only function. |
 | PDF renderer | Render the completed report from validated application data, not from raw model output or arbitrary HTML. |
 | Plotly skills chart | Horizontal bar chart of all detected skills, shaded by confidence (evidenced vs inferred), rendered client-side in Streamlit via `st.plotly_chart`. |
 | Configuration/observability | Load validated runtime settings and secrets; emit privacy-safe structured operational events and health information. |
@@ -161,7 +163,7 @@ sequenceDiagram
     participant Parser as Resume parser
     participant GPT as OpenAI adapter/API
     participant Domain as Domain analysis and matching
-    participant DB as SQLite job catalog
+    participant DB as Supabase PostgreSQL catalog
     participant PDF as Report renderer
 
     User->>UI: Review privacy notice and upload PDF/DOCX/TXT
@@ -220,12 +222,12 @@ resume-analyzer/
 ├── parsers/                        # Resume file validation and text extraction (PDF, DOCX, TXT)
 ├── prompts/                        # Versioned, static prompt templates
 ├── reports/                        # Downloadable report rendering
-├── repositories/                   # SQLite catalog access and schema migrations
+├── repositories/                   # Supabase catalog access and SQL migrations
 ├── services/                       # Application workflows and dependency ports
 │   ├── recommendation_service.py   # Deterministic job matching and gap analysis
 │   └── jd_matcher.py               # JD keyword extraction, match scoring, rewrite rules
 ├── utils/                          # Small cross-cutting, non-domain helpers
-├── tests/                          # Unit, integration, contract, and UI tests (175 passing)
+├── tests/                          # Unit, integration, contract, and UI tests
 ├── scripts/                        # Authorized job-catalog maintenance commands
 ├── data/                           # Runtime catalog only; no user resumes
 ├── .streamlit/                     # Non-secret Streamlit configuration
@@ -241,14 +243,14 @@ The complete proposed file tree, file responsibilities, and dependency direction
 
 ## 5. Design Patterns
 
-1. **Layered architecture / ports and adapters:** Domain and application code depend on interfaces rather than Streamlit, OpenAI, or SQLite implementations. This allows deterministic unit tests and future provider/storage replacement.
+1. **Layered architecture / ports and adapters:** Domain and application code depend on interfaces rather than Streamlit, AI providers, or Supabase SDK details. This allows deterministic unit tests and future provider/storage replacement.
 2. **Modular monolith:** Deploy one service but maintain explicit domain, application, adapter, and presentation boundaries. Avoid premature microservices for the initial scale.
 3. **Use-case/application service:** Each user action has an explicit application entry point (`AnalyzeResume`, `RecommendJobs`, `GenerateReport`) that owns orchestration and returns typed results.
-4. **Repository pattern:** Hide SQLite details behind a job-catalog repository. Expose domain-oriented operations such as `find_active_jobs(...)`, not raw SQL or database connections.
+4. **Repository pattern:** Hide Supabase/PostgreSQL details behind a job-catalog repository. Expose domain-oriented operations, not raw database connections.
 5. **Adapter/anti-corruption layer:** Normalize OpenAI responses and provider exceptions into internal schemas/errors. Provider response types must not leak into domain or UI code.
 6. **Strategy pattern:** Keep parsing format-specific and selectable by detected/validated type; allow matching strategies to evolve without changing the workflow contract.
 7. **Schema-first boundary validation:** Validate uploaded-file metadata, model output, catalog rows, and report input at component boundaries. Reject invalid output rather than returning partially trusted data.
-8. **Dependency injection:** Construct repositories, parsers, and AI clients from validated settings at application startup; tests inject fakes or temporary SQLite databases.
+8. **Dependency injection:** Construct repositories, parsers, and AI clients from validated settings at application startup; tests inject fakes.
 9. **Result/error types:** Represent expected failures explicitly (invalid file, unsupported format, AI unavailable, invalid model response, no catalog results). Do not convert failures into empty successful analyses.
 
 ## 6. Security and Privacy Considerations
@@ -264,8 +266,8 @@ The complete proposed file tree, file responsibilities, and dependency direction
 
 ### Application and infrastructure
 
-- Serve the UI only over HTTPS in production. Restrict access to the SQLite file and backups with operating-system permissions and encryption at the storage layer where available.
-- Keep `OPENAI_API_KEY` in a deployment secret manager or protected environment variable. Never place secrets in source, Streamlit config committed to the repository, logs, or SQLite.
+- Serve the UI only over HTTPS in production. Use Supabase database access controls and managed backups.
+- Keep provider keys and the Supabase service-role key in deployment secrets. Never place secrets in source, committed Streamlit config, logs, or client-side code.
 - Pin and regularly update dependencies; scan dependencies and the deployment image for known vulnerabilities.
 - Validate upload extension and content independently; never trust client-provided MIME type. Use safe temporary-file handling if a parser requires disk access and remove temporary data reliably.
 - Use parameterized SQL, read-only database access for catalog queries, and transactional, validated import operations for catalog refresh.
@@ -294,7 +296,7 @@ The complete proposed file tree, file responsibilities, and dependency direction
 
 ### Metrics and health signals
 
-Track aggregate counts and latency for successful/failed parsing, analysis, recommendation lookup, and report generation; OpenAI timeout/rate-limit/error categories; catalog age; and SQLite busy/locking errors. Metrics must not include resume content or directly identifying labels.
+Track aggregate counts and latency for successful/failed parsing, analysis, recommendation lookup, and report generation; provider timeout/rate-limit/error categories; catalog age; and PostgreSQL errors. Metrics must not include resume content or directly identifying labels.
 
 Expose deployment-level liveness/readiness checks where supported. Readiness should verify required configuration and database connectivity; do not make a model API call on every health probe. Alert on sustained analysis failures, elevated latency, stale job catalogs, repeated database locking, and unexpected cost/token growth.
 
@@ -304,7 +306,7 @@ Expose deployment-level liveness/readiness checks where supported. Readiness sho
 
 1. **Presentation boundary:** Catch known application errors and show actionable, non-technical messages. Preserve entered non-sensitive preferences where practical. Never show stack traces, provider payloads, file contents, or secrets.
 2. **Application boundary:** Convert adapter failures into typed internal errors and attach a correlation ID. Do not broadly catch and suppress exceptions.
-3. **Adapter boundary:** Normalize SDK, parser, filesystem, and SQLite exceptions. Preserve the original exception as a cause for secure diagnostics.
+3. **Adapter boundary:** Normalize SDK, parser, filesystem, and PostgreSQL exceptions. Preserve the original exception as a cause for secure diagnostics.
 4. **Process boundary:** Unexpected errors are logged with a correlation ID and reported as a generic failure. They must not become empty analysis data or success notifications.
 
 ### Error taxonomy and user behavior
@@ -315,7 +317,7 @@ Expose deployment-level liveness/readiness checks where supported. Readiness sho
 | Parse failure | Encrypted PDF, no extractable text | Explain that the document could not be read | Provide an unlocked/text-based file |
 | AI transient | Timeout, rate limit, provider unavailable | Explain temporary analysis unavailability | Bounded retry initiated by user or safe retry policy |
 | AI contract/safety | Malformed schema, unsupported claim, invalid evidence | Do not display the result as complete | Retry once only if appropriate; otherwise request a new analysis later |
-| Catalog availability | SQLite busy/error, catalog missing/stale | Preserve completed resume analysis and disclose recommendations are unavailable/limited | Retry lookup or refresh catalog operationally |
+| Catalog availability | PostgreSQL error, catalog missing/stale | Preserve completed resume analysis and disclose recommendations are unavailable/limited | Retry lookup or refresh catalog operationally |
 | No suitable results | No current matching listing | Explain that no suitable current listing was found | Adjust supported preferences or check later |
 | Report generation | Renderer error or invalid report input | Keep results available and show download failure | Retry report generation |
 | Unexpected internal | Unclassified programming/runtime error | Generic message with correlation ID | Support/operations investigation |
@@ -331,7 +333,7 @@ Use pytest with tests organized by unit, integration, contract, and UI layers. K
 | Layer | Scope | Technique |
 |---|---|---|
 | Unit | File validation, evidence handling, skill-gap wording, match scoring, model validation, error mapping, report content construction | Fast tests with synthetic inputs; no network or filesystem dependencies unless isolated |
-| Integration | Application workflows, SQLite repository/migrations, catalog freshness and filtering, parser adapters, report generation | Temporary directories and per-test SQLite databases; synthetic PDF/DOCX fixtures |
+| Integration | Application workflows, Supabase repository/migrations, catalog freshness and filtering, parser adapters, report generation | Mock Supabase clients and synthetic PDF/DOCX fixtures |
 | Contract | OpenAI structured response schema, required evidence/caveat fields, size bounds, normalized provider errors | Recorded synthetic fixtures and schema validation; separate opt-in live smoke test if approved |
 | UI | Upload, progress, results, correction, partial failure, and report-download behavior | Streamlit AppTest or equivalent UI harness; test accessible labels and visible error states |
 | Security/privacy | Upload validation, prompt-injection samples, log redaction, no-secret/no-resume persistence, malformed model output | Adversarial synthetic tests and dependency/security scanning |
@@ -343,7 +345,7 @@ Use pytest with tests organized by unit, integration, contract, and UI layers. K
 - Missing, malformed, oversized, and factually unsupported AI response fields.
 - Prompt injection embedded in synthetic resume content; verify it is treated as data, not instructions.
 - A supported skill with evidence, an inferred skill, ambiguous evidence, and a role requirement not found in the resume.
-- No catalog listings, stale listings, expired jobs, missing application links, and SQLite lock/read failures.
+- No catalog listings, stale listings, expired jobs, missing application links, and PostgreSQL read/write failures.
 - OpenAI timeout, rate limit, authentication/configuration failure, and unavailable service.
 - Report generation success and failure, with checks that reports contain expected sections and no hidden diagnostics.
 - User correction updates the current analysis/recommendation inputs as specified by the application contract.
@@ -365,5 +367,5 @@ Use pytest with tests organized by unit, integration, contract, and UI layers. K
 3. Confirm OpenAI model/provider settings, data-processing terms, region, retention configuration, and user-consent language.
 4. Decide whether uploads/results remain strictly transient and define Streamlit session cleanup behavior.
 5. Define backup/restore, catalog refresh, dependency update, incident response, and secret-rotation procedures.
-6. Validate SQLite concurrency under expected load and document the migration trigger to a server database.
+6. Configure Supabase Auth email confirmation, project URL, redirect allowlist, row-level security, and secret rotation before production use.
 7. Confirm the downloadable report format and accessibility requirements with product/design.
