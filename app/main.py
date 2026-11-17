@@ -4,7 +4,6 @@
 
 import logging
 import sys
-from collections.abc import Callable
 from dataclasses import dataclass
 from html import escape
 from pathlib import Path
@@ -22,19 +21,19 @@ from app.pages.login import render_login_page
 from app.pages.results import render_results_page
 from app.pages.resume_builder import render_resume_builder
 from app.services.resume_service import ResumeService
-from app.session_state import SUPABASE_AUTH_CLIENT_KEY, get_current_user, logout_user
+from app.session_state import get_current_user, logout_user
 from app.utils.errors import ApplicationError
 from app.utils.logging_config import configure_logging
 from integrations.gemini_gateway import GeminiAnalysisGateway
 from integrations.openai_gateway import OpenAIAnalysisGateway
 from reports.pdf_renderer import ReportLabPdfRenderer
-from repositories.supabase_job_repository import SupabaseJobRepository
+from repositories.sqlite_job_repository import SQLiteJobRepository
+from repositories.sqlite_user_repository import SQLiteUserRepository
 from services.analysis_service import AnalysisService
+from services.auth_service import AuthService
 from services.catalog_seeder import ensure_job_catalog
 from services.recommendation_service import RecommendationService
 from services.report_service import ReportService
-from services.supabase_auth_service import SupabaseAuthService
-from supabase import create_client
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +44,7 @@ class ApplicationServices:
     analysis: AnalysisService | None
     recommendations: RecommendationService
     report: ReportService
-    auth: SupabaseAuthService
-    embedder: Callable[[str], list[float]] | None = None
+    auth: AuthService
 
 
 @st.cache_resource
@@ -58,34 +56,17 @@ def _build_services() -> ApplicationServices:
             gateway = GeminiAnalysisGateway(settings)
     elif settings.openai_api_key:
         gateway = OpenAIAnalysisGateway(settings)
-    if not settings.supabase_url or not settings.supabase_anon_key:
-        raise ValueError(
-            "Create a Supabase project, run the documented SQL migration, and set "
-            "SUPABASE_URL and SUPABASE_ANON_KEY."
-        )
-    if not settings.supabase_service_role_key:
-        raise ValueError(
-            "Set SUPABASE_SERVICE_ROLE_KEY as a server-side secret for the job catalog."
-        )
-    job_repository = SupabaseJobRepository(
-        create_client(settings.supabase_url, settings.supabase_service_role_key)
-    )
+    job_repository = SQLiteJobRepository(settings.sqlite_database_path)
+    user_repository = SQLiteUserRepository(settings.sqlite_user_database_path)
     ensure_job_catalog(job_repository, settings)
-    ocr_extractor = getattr(gateway, "extract_text_from_pdf", None) if gateway is not None else None
-    embedder = getattr(gateway, "embed_text", None) if gateway is not None else None
     return ApplicationServices(
-        resume=ResumeService(
-            settings.max_upload_bytes,
-            settings.max_resume_chars,
-            ocr_extractor=ocr_extractor,
-        ),
+        resume=ResumeService(settings.max_upload_bytes, settings.max_resume_chars),
         analysis=AnalysisService(gateway) if gateway is not None else None,
         recommendations=RecommendationService(
             job_repository, max_age_days=settings.job_listing_max_age_days
         ),
         report=ReportService(ReportLabPdfRenderer()),
-        auth=SupabaseAuthService(settings.supabase_url, settings.supabase_anon_key),
-        embedder=embedder,
+        auth=AuthService(user_repository),
     )
 
 
@@ -115,7 +96,7 @@ def _render_sidebar_brand() -> None:
     )
 
 
-def _render_sidebar_auth(current_user: object | None, auth: SupabaseAuthService) -> None:
+def _render_sidebar_auth(current_user: object | None) -> None:
     """Show concise account status above the primary navigation."""
     _render_sidebar_brand()
     st.markdown('<div class="section-eyebrow">Account</div>', unsafe_allow_html=True)
@@ -145,9 +126,7 @@ def _render_sidebar_auth(current_user: object | None, auth: SupabaseAuthService)
             unsafe_allow_html=True,
         )
         if st.button("Sign Out", key="sidebar_signout", use_container_width=True):
-            auth_client = st.session_state.get(SUPABASE_AUTH_CLIENT_KEY)
             logout_user(st.session_state)
-            auth.sign_out(auth_client)
             st.rerun()
     else:
         st.markdown(
@@ -175,11 +154,7 @@ def main() -> None:
         return
     try:
         services = _build_services()
-    except ValueError as exc:
-        logger.error("Application configuration is incomplete: %s", exc)
-        st.error(str(exc))
-        return
-    except (ApplicationError, OSError, RuntimeError):
+    except (ApplicationError, OSError, ValueError, RuntimeError):
         logger.exception("Application initialization failed")
         st.error("The application could not initialize. Check deployment configuration.")
         return
@@ -204,9 +179,7 @@ def main() -> None:
         )
 
     def show_results_page() -> None:
-        render_results_page(
-            services.report, services.recommendations, embedder=services.embedder
-        )
+        render_results_page(services.report, services.recommendations)
 
     def show_resume_builder_page() -> None:
         render_resume_builder(services.resume)
@@ -225,7 +198,7 @@ def main() -> None:
     )
 
     with st.sidebar:
-        _render_sidebar_auth(current_user, services.auth)
+        _render_sidebar_auth(current_user)
         st.markdown('<div class="section-eyebrow">Workspace</div>', unsafe_allow_html=True)
         st.page_link(analyze_page, label="Analyze resume", use_container_width=True)
         st.page_link(results_page, label="Results", use_container_width=True)

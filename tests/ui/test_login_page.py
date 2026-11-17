@@ -3,23 +3,17 @@
 from streamlit.testing.v1 import AppTest
 
 
-def test_login_page_renders_unauthenticated_tabs():
-    source = """
+def test_login_page_renders_unauthenticated_tabs(tmp_path):
+    source = f"""
+from pathlib import Path
 import streamlit as st
 from app.pages.login import render_login_page
-from models.user import AuthenticatedUser
+from repositories.sqlite_user_repository import SQLiteUserRepository
+from services.auth_service import AuthService
 
-class FakeAuth:
-    def register(self, username, email, full_name, password):
-        return AuthenticatedUser("usr-1", username, email, full_name, "now"), object(), None
-
-    def authenticate(self, email, password):
-        return AuthenticatedUser("usr-1", "alex_dev", email, "Alex Developer", "now"), object(), None
-
-    def sign_out(self, client):
-        pass
-
-render_login_page(FakeAuth())
+repo = SQLiteUserRepository(Path(r"{tmp_path}") / "users.sqlite3")
+auth_service = AuthService(repo)
+render_login_page(auth_service)
 """
     app = AppTest.from_string(source).run(timeout=10)
     assert not app.exception
@@ -37,23 +31,17 @@ render_login_page(FakeAuth())
     assert any("Create Account" in b for b in button_labels)
 
 
-def test_register_and_login_flow():
-    source = """
+def test_register_and_login_flow(tmp_path):
+    source = f"""
+from pathlib import Path
 import streamlit as st
 from app.pages.login import render_login_page
-from models.user import AuthenticatedUser
+from repositories.sqlite_user_repository import SQLiteUserRepository
+from services.auth_service import AuthService
 
-class FakeAuth:
-    def register(self, username, email, full_name, password):
-        return AuthenticatedUser("usr-1", username, email, full_name, "now"), object(), None
-
-    def authenticate(self, email, password):
-        return AuthenticatedUser("usr-1", "alex_dev", email, "Alex Developer", "now"), object(), None
-
-    def sign_out(self, client):
-        pass
-
-render_login_page(FakeAuth())
+repo = SQLiteUserRepository(Path(r"{tmp_path}") / "users.sqlite3")
+auth_service = AuthService(repo)
+render_login_page(auth_service)
 """
     app = AppTest.from_string(source).run(timeout=10)
     assert not app.exception
@@ -70,6 +58,7 @@ render_login_page(FakeAuth())
     create_btn.click().run(timeout=10)
     assert not app.exception
 
+    # Verify session state has authenticated user
     auth_user = app.session_state["authenticated_user"]
     assert auth_user is not None
     assert auth_user.username == "alex_dev"
@@ -84,69 +73,17 @@ render_login_page(FakeAuth())
     assert "alex@example.com" in markdowns
 
 
-def test_email_confirmation_code_completes_registration():
-    source = """
+def test_logout_button_clears_session(tmp_path):
+    source = f"""
+from pathlib import Path
 import streamlit as st
 from app.pages.login import render_login_page
 from models.user import AuthenticatedUser
+from repositories.sqlite_user_repository import SQLiteUserRepository
+from services.auth_service import AuthService
 
-class FakeAuth:
-    def register(self, username, email, full_name, password):
-        return None, None, "Check your email to confirm your account, then sign in."
-
-    def authenticate(self, email, password):
-        return None, None, "Not used"
-
-    def verify_email_otp(self, email, token):
-        assert email == "alex@example.com"
-        assert token == "123456"
-        return AuthenticatedUser("usr-1", "alex_dev", email, "Alex Developer", "now"), object(), None
-
-    def resend_verification_code(self, email):
-        return None
-
-    def sign_out(self, client):
-        pass
-
-render_login_page(FakeAuth())
-"""
-    app = AppTest.from_string(source).run(timeout=10)
-    assert not app.exception
-
-    app.text_input(key="reg_name").set_value("Alex Developer")
-    app.text_input(key="reg_user").set_value("alex_dev")
-    app.text_input(key="reg_mail").set_value("alex@example.com")
-    app.text_input(key="reg_pwd1").set_value("SecurePass123!")
-    app.text_input(key="reg_pwd2").set_value("SecurePass123!")
-    next(b for b in app.button if "Create Account" in b.label).click().run(timeout=10)
-
-    assert not app.exception
-    assert app.session_state["pending_verification_email"] == "alex@example.com"
-    assert any("Check your inbox" in item.value for item in app.header)
-
-    app.text_input(key="otp_token_input").set_value("123456")
-    next(b for b in app.button if "Verify & Sign In" in b.label).click().run(timeout=10)
-
-    assert not app.exception
-    assert "pending_verification_email" not in app.session_state
-    assert app.session_state["authenticated_user"].email == "alex@example.com"
-
-
-def test_logout_button_clears_session():
-    source = """
-import streamlit as st
-from app.pages.login import render_login_page
-from models.user import AuthenticatedUser
-
-class FakeAuth:
-    def register(self, username, email, full_name, password):
-        return None, None, "Not used"
-
-    def authenticate(self, email, password):
-        return None, None, "Not used"
-
-    def sign_out(self, client):
-        pass
+repo = SQLiteUserRepository(Path(r"{tmp_path}") / "users.sqlite3")
+auth_service = AuthService(repo)
 
 if "init_done" not in st.session_state:
     st.session_state["init_done"] = True
@@ -158,7 +95,7 @@ if "init_done" not in st.session_state:
         created_at="2026-10-12T00:00:00Z",
     )
 
-render_login_page(FakeAuth())
+render_login_page(auth_service)
 """
     app = AppTest.from_string(source).run(timeout=10)
     assert not app.exception

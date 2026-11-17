@@ -1,20 +1,15 @@
-"""Hybrid job-description vs resume matcher (keyword intersection + dense semantic embeddings).
+"""Deterministic job-description vs resume matcher.
 
-Combines exact keyword overlap with dense vector cosine similarity for resilient match scoring.
+Reuses the existing skill normalisation in recommendation_service.
 No metrics are invented: only keywords that appear in the JD are checked.
 """
 
 from __future__ import annotations
 
-import logging
-import math
 import re
-from collections.abc import Callable
 from dataclasses import dataclass
 
 from models.analysis import ResumeAnalysis
-
-logger = logging.getLogger(__name__)
 
 
 def _normalize(value: str) -> str:
@@ -25,18 +20,6 @@ def _tokenize(text: str) -> set[str]:
     """Split text into normalized word-tokens of length ≥ 2."""
     raw = re.findall(r"[a-z0-9][a-z0-9+#./]*", text.casefold())
     return {t for t in raw if len(t) >= 2}
-
-
-def _cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
-    """Compute cosine similarity between two float vectors."""
-    if not vec_a or not vec_b or len(vec_a) != len(vec_b):
-        return 0.0
-    dot = sum(a * b for a, b in zip(vec_a, vec_b))
-    norm_a = math.sqrt(sum(a * a for a in vec_a))
-    norm_b = math.sqrt(sum(b * b for b in vec_b))
-    if norm_a == 0.0 or norm_b == 0.0:
-        return 0.0
-    return max(0.0, min(1.0, dot / (norm_a * norm_b)))
 
 
 def _extract_jd_keywords(jd_text: str) -> list[str]:
@@ -84,13 +67,11 @@ class RewriteSuggestion:
 
 @dataclass(frozen=True, slots=True)
 class JDMatchResult:
-    score: int                         # Overall hybrid score (0-100)
+    score: int                         # 0-100
     matched_keywords: tuple[str, ...]
     missing_keywords: tuple[str, ...]
     all_jd_keywords: tuple[str, ...]
     rewrite_suggestions: tuple[RewriteSuggestion, ...]
-    keyword_score: int = 0             # Exact keyword overlap (0-100)
-    semantic_score: int = 0            # Dense embedding semantic match (0-100)
 
 
 # ---------------------------------------------------------------------------
@@ -157,12 +138,11 @@ def match_jd(
     resume_text: str,
     analysis: ResumeAnalysis,
     jd_text: str,
-    embedder: Callable[[str], list[float]] | None = None,
 ) -> JDMatchResult:
-    """Score the resume against the JD using hybrid (keyword + semantic) matching."""
+    """Score the resume against the JD using keyword intersection."""
     jd_keywords = _extract_jd_keywords(jd_text)
     if not jd_keywords:
-        return JDMatchResult(0, (), (), (), (), keyword_score=0, semantic_score=0)
+        return JDMatchResult(0, (), (), (), ())
 
     resume_tokens = _tokenize(resume_text)
     # also add skill names from the AI analysis for better coverage
@@ -181,40 +161,12 @@ def match_jd(
         else:
             missing.append(kw)
 
-    keyword_score = round(len(matched) / len(jd_keywords) * 100) if jd_keywords else 0
-    semantic_score = keyword_score
-
-    if embedder is not None:
-        try:
-            resume_summary = (
-                f"Summary: {analysis.summary}\n"
-                f"Skills: {', '.join(s.name for s in analysis.skills)}\n"
-                f"Highlights: {' '.join(analysis.experience_highlights[:4])}"
-            )
-            if len(resume_summary) < 150:
-                resume_summary += f"\n{resume_text[:1500]}"
-            vec_resume = embedder(resume_summary)
-            vec_jd = embedder(jd_text[:3000])
-            if vec_resume and vec_jd:
-                sim = _cosine_similarity(vec_resume, vec_jd)
-                scaled_sim = max(0.0, min(1.0, (sim - 0.25) / 0.65))
-                semantic_score = round(scaled_sim * 100)
-        except (RuntimeError, ValueError, TypeError, OSError) as exc:
-            logger.debug("Semantic embedding calculation skipped: %s", exc)
-
-    # shortcut: 50% keyword + 50% semantic weighting; upgrade to reciprocal rank fusion for multi-tier scoring
-    if embedder is not None and semantic_score != keyword_score:
-        overall_score = round(0.5 * keyword_score + 0.5 * semantic_score)
-    else:
-        overall_score = keyword_score
-
+    score = round(len(matched) / len(jd_keywords) * 100) if jd_keywords else 0
     rewrites = _suggest_rewrites(resume_text)
     return JDMatchResult(
-        score=overall_score,
+        score=score,
         matched_keywords=tuple(matched),
         missing_keywords=tuple(missing),
         all_jd_keywords=tuple(jd_keywords),
         rewrite_suggestions=tuple(rewrites),
-        keyword_score=keyword_score,
-        semantic_score=semantic_score,
     )

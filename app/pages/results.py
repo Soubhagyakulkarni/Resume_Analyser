@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 
 import streamlit as st
 
@@ -38,7 +37,6 @@ logger = logging.getLogger(__name__)
 def render_results_page(
     report_service: ReportService,
     recommendation_service: RecommendationService,
-    embedder: Callable[[str], list[float]] | None = None,
 ) -> None:
     analysis: ResumeAnalysis | None = st.session_state.get(ANALYSIS_KEY)
     recommendations = st.session_state.get(RECOMMENDATIONS_KEY, [])
@@ -168,7 +166,6 @@ def render_results_page(
         profile=profile,
         report_bytes=report_bytes,
         resume_text=st.session_state.get(RESUME_TEXT_KEY, ""),
-        embedder=embedder,
     )
 
     render_footer()

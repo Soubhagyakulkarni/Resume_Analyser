@@ -88,7 +88,7 @@ class GeminiAnalysisGateway:
                             continue
                         break
                     raise ProviderRequestError() from exc
-                except (OSError, RuntimeError, ValueError) as exc:
+                except Exception as exc:
                     last_exc = exc
                     logger.warning(
                         "Gemini network error model=%s attempt=%d error=%s",
@@ -116,60 +116,3 @@ class GeminiAnalysisGateway:
             return ResumeAnalysis.from_dict(payload)
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
             raise InvalidModelResponseError() from exc
-
-    def extract_text_from_pdf(self, content: bytes) -> str:
-        """Extract plain text from scanned or image-based PDF using Gemini multimodal."""
-        # shortcut: inline PDF bytes capped at 4000 output tokens, upgrade to File API for 20+ page docs
-        prompt = (
-            "Extract all readable text from this scanned resume document accurately and completely. "
-            "Preserve sections, headings, bullet points, skills, contact info, and dates as plain text. "
-            "Return only the extracted text without commentary."
-        )
-        pdf_part = types.Part.from_bytes(data=content, mime_type="application/pdf")
-        models_to_try = [self._model]
-        if self._model != "gemini-2.0-flash":
-            models_to_try.append("gemini-2.0-flash")
-
-        for current_model in models_to_try:
-            for attempt in range(self._max_retries + 1):
-                try:
-                    response = self._client.models.generate_content(
-                        model=current_model,
-                        contents=[pdf_part, prompt],
-                        config=types.GenerateContentConfig(
-                            temperature=0.1,
-                            max_output_tokens=4000,
-                        ),
-                    )
-                    text = getattr(response, "text", "") or ""
-                    if text.strip():
-                        return text.strip()
-                except (errors.APIError, OSError, ValueError, RuntimeError) as exc:
-                    logger.warning(
-                        "Gemini PDF OCR attempt failed model=%s attempt=%d error=%s",
-                        current_model,
-                        attempt + 1,
-                        exc,
-                    )
-                    if attempt < self._max_retries:
-                        time.sleep(1)
-                        continue
-                    break
-        return ""
-
-    def embed_text(self, text: str) -> list[float]:
-        """Generate a dense vector embedding using gemini-embedding-001."""
-        # shortcut: truncated to 4000 chars for single-call embedding, upgrade for book-length documents
-        clean_text = text[:4000].strip()
-        if not clean_text:
-            return []
-        try:
-            response = self._client.models.embed_content(
-                model="gemini-embedding-001",
-                contents=clean_text,
-            )
-            if response.embeddings and response.embeddings[0].values:
-                return list(response.embeddings[0].values)
-        except (errors.APIError, OSError, ValueError, RuntimeError) as exc:
-            logger.warning("Gemini text embedding failed: %s", exc)
-        return []

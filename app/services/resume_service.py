@@ -1,7 +1,5 @@
 """Resume input validation and PDF, DOCX, or pasted-text parsing."""
 
-from collections.abc import Callable
-
 from app.utils.errors import InvalidResumeError
 from models.resume import ParsedResume
 from parsers.docx_parser import parse_docx
@@ -12,15 +10,9 @@ from parsers.pdf_parser import parse_pdf
 class ResumeService:
     """Validate resume input and convert it to bounded plain text."""
 
-    def __init__(
-        self,
-        max_upload_bytes: int,
-        max_resume_chars: int = 50_000,
-        ocr_extractor: Callable[[bytes], str] | None = None,
-    ) -> None:
+    def __init__(self, max_upload_bytes: int, max_resume_chars: int = 50_000) -> None:
         self._max_upload_bytes = max_upload_bytes
         self._max_resume_chars = max_resume_chars
-        self._ocr_extractor = ocr_extractor
 
     @property
     def max_resume_chars(self) -> int:
@@ -31,7 +23,7 @@ class ResumeService:
         """Validate and extract text from a supported resume document."""
         file_type = validate_resume_file(filename, content, self._max_upload_bytes)
         if file_type == "pdf":
-            parsed = parse_pdf(filename, content, ocr_fallback=self._ocr_extractor)
+            parsed = parse_pdf(filename, content)
         elif file_type == "docx":
             parsed = parse_docx(filename, content)
         else:  # txt

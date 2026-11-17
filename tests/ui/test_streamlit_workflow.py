@@ -1,5 +1,7 @@
 """Presentation-state tests that run without a browser or OpenAI account."""
 
+from pathlib import Path
+
 from app.session_state import (
     ANALYSIS_KEY,
     CORRELATION_ID_KEY,
@@ -28,17 +30,8 @@ def test_streamlit_entrypoint_explains_missing_api_key(monkeypatch):
 
     monkeypatch.setenv("AI_PROVIDER", "openai")
     monkeypatch.setenv("OPENAI_API_KEY", "")
-    app = AppTest.from_string(
-        """
-from types import SimpleNamespace
-import app.main as application
-
-application._build_services = lambda: SimpleNamespace(
-    analysis=None, recommendations=None, report=None, auth=None, resume=None
-)
-application.main()
-"""
-    ).run(timeout=10)
+    app_file = Path(__file__).parents[2] / "app" / "main.py"
+    app = AppTest.from_file(str(app_file)).run(timeout=10)
 
     assert any("Set OPENAI_API_KEY" in item.value for item in app.error)
 
@@ -48,41 +41,10 @@ def test_streamlit_entrypoint_explains_missing_gemini_key(monkeypatch):
 
     monkeypatch.setenv("AI_PROVIDER", "gemini")
     monkeypatch.setenv("GEMINI_API_KEY", "")
-    app = AppTest.from_string(
-        """
-from types import SimpleNamespace
-import app.main as application
-
-application._build_services = lambda: SimpleNamespace(
-    analysis=None, recommendations=None, report=None, auth=None, resume=None
-)
-application.main()
-"""
-    ).run(timeout=10)
+    app_file = Path(__file__).parents[2] / "app" / "main.py"
+    app = AppTest.from_file(str(app_file)).run(timeout=10)
 
     assert any("Set GEMINI_API_KEY" in item.value for item in app.error)
-
-
-def test_streamlit_entrypoint_explains_missing_supabase_setup():
-    from streamlit.testing.v1 import AppTest
-
-    app = AppTest.from_string(
-        """
-import app.main as application
-
-def missing_supabase():
-    raise ValueError(
-        "Create a Supabase project, run the documented SQL migration, and set "
-        "SUPABASE_URL and SUPABASE_ANON_KEY."
-    )
-
-application._build_services = missing_supabase
-application.main()
-"""
-    ).run(timeout=10)
-
-    assert not app.exception
-    assert any("Create a Supabase project" in item.value for item in app.error)
 
 
 def test_results_page_explains_that_resume_analysis_is_required():

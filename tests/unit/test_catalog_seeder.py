@@ -1,6 +1,7 @@
 """Unit tests for catalog seeder behavior."""
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 from app.config.settings import Settings
 from models.job import Job
@@ -18,7 +19,7 @@ class FakeRepository:
         self.jobs = list(jobs)
 
 
-def test_catalog_seeder_populates_empty_repository():
+def test_catalog_seeder_populates_empty_repository(tmp_path):
     repo = FakeRepository()
     settings = Settings(
         ai_provider="openai",
@@ -30,6 +31,7 @@ def test_catalog_seeder_populates_empty_repository():
         openai_max_retries=3,
         max_upload_bytes=10 * 1024 * 1024,
         max_resume_chars=50000,
+        sqlite_database_path=tmp_path / "jobs.sqlite3",
         job_listing_max_age_days=30,
         adzuna_app_id=None,
         adzuna_app_key=None,
@@ -69,6 +71,7 @@ def test_catalog_seeder_skips_when_already_fresh():
         openai_max_retries=3,
         max_upload_bytes=10 * 1024 * 1024,
         max_resume_chars=50000,
+        sqlite_database_path=Path("jobs.sqlite3"),
         job_listing_max_age_days=30,
         adzuna_app_id=None,
         adzuna_app_key=None,

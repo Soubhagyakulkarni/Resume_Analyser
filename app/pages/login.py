@@ -4,24 +4,18 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from html import escape
 
 import streamlit as st
 
 from app.components.footer import render_footer
-from app.session_state import (
-    SUPABASE_AUTH_CLIENT_KEY,
-    get_current_user,
-    logout_user,
-    set_current_user,
-)
+from app.session_state import get_current_user, logout_user, set_current_user
 from models.user import AuthenticatedUser
-from services.supabase_auth_service import SupabaseAuthService
+from services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
 
-def render_login_page(auth_service: SupabaseAuthService) -> None:
+def render_login_page(auth_service: AuthService) -> None:
     """Render the real user authentication dashboard (Sign In / Create Account)."""
     current_user = get_current_user(st.session_state)
 
@@ -35,16 +29,14 @@ def render_login_page(auth_service: SupabaseAuthService) -> None:
     )
 
     if current_user is not None:
-        _render_authenticated_dashboard(current_user, auth_service)
+        _render_authenticated_dashboard(current_user)
     else:
         _render_auth_forms(auth_service)
 
     render_footer()
 
 
-def _render_authenticated_dashboard(
-    current_user: AuthenticatedUser, auth_service: SupabaseAuthService
-) -> None:
+def _render_authenticated_dashboard(current_user: AuthenticatedUser) -> None:
     """Show user profile, session details, and logout option when signed in."""
     st.markdown(
         '<div class="section-eyebrow">User account</div>',
@@ -94,85 +86,21 @@ def _render_authenticated_dashboard(
             )
         with col_logout:
             if st.button("Sign Out", type="secondary", use_container_width=True, key="btn_logout"):
-                auth_client = st.session_state.get(SUPABASE_AUTH_CLIENT_KEY)
                 logout_user(st.session_state)
-                auth_service.sign_out(auth_client)
                 st.success("You have been signed out.")
                 st.rerun()
 
 
-def _render_otp_verification(auth_service: SupabaseAuthService) -> None:
-    """Render the 6-digit email confirmation code entry screen."""
-    email = str(st.session_state.get("pending_verification_email", ""))
-    st.markdown('<div class="section-eyebrow">Email verification</div>', unsafe_allow_html=True)
-    st.header("Check your inbox")
-    st.caption(
-        f"A 6-digit verification code was sent to **{escape(email)}** by Supabase Auth."
-    )
-
-    with st.container(border=True):
-        st.markdown("#### Enter verification code")
-        st.caption("Enter the code from your email to activate your account and complete sign-in.")
-
-        with st.form("form_verify_otp", clear_on_submit=False):
-            token = st.text_input(
-                "Verification code",
-                placeholder="e.g. 123456",
-                max_chars=12,
-                key="otp_token_input",
-                help="Check your spam or junk folder if the email does not appear in your inbox.",
-            )
-            submit_verify = st.form_submit_button(
-                "Verify & Sign In  →",
-                type="primary",
-                use_container_width=True,
-            )
-
-        if submit_verify:
-            if not token.strip():
-                st.error("Please enter the verification code sent to your email.")
-            elif hasattr(auth_service, "verify_email_otp"):
-                user, client, err = auth_service.verify_email_otp(email, token.strip())
-                if err:
-                    st.error(err)
-                elif user:
-                    st.session_state.pop("pending_verification_email", None)
-                    st.session_state[SUPABASE_AUTH_CLIENT_KEY] = client
-                    set_current_user(st.session_state, user)
-                    st.success(f"Email verified! Welcome, {user.full_name or user.username}!")
-                    st.rerun()
-
-        col_resend, col_cancel = st.columns(2)
-        with col_resend:
-            if (
-                st.button("Resend code", key="btn_resend_otp", use_container_width=True)
-                and hasattr(auth_service, "resend_verification_code")
-            ):
-                err = auth_service.resend_verification_code(email)
-                if err:
-                    st.error(err)
-                else:
-                    st.success("A new verification code has been sent to your email.")
-        with col_cancel:
-            if st.button("Use different email / Back", key="btn_cancel_otp", use_container_width=True):
-                st.session_state.pop("pending_verification_email", None)
-                st.rerun()
-
-
-def _render_auth_forms(auth_service: SupabaseAuthService) -> None:
+def _render_auth_forms(auth_service: AuthService) -> None:
     """Show Sign In and Create Account tabs with validation and database storage."""
-    if st.session_state.get("pending_verification_email"):
-        _render_otp_verification(auth_service)
-        return
-
     st.markdown(
         '<div class="section-eyebrow">Account access</div>',
         unsafe_allow_html=True,
     )
     st.header("Sign in or create an account")
     st.caption(
-        "Create an optional account for email/password sign-in. Resume analysis remains"
-        " available to guests."
+        "Sign in to personalize your career recommendations, or create a free account"
+        " if you are a new user."
     )
 
     tab_signin, tab_register = st.tabs(["Sign In", "Create Account"])
@@ -180,12 +108,12 @@ def _render_auth_forms(auth_service: SupabaseAuthService) -> None:
     # ── Tab 1: Sign In ─────────────────────────────────────────────────────────
     with tab_signin, st.container(border=True):
         st.markdown("#### Welcome back")
-        st.caption("Enter your email and password to access your account.")
+        st.caption("Enter your email or username and password to access your account.")
 
         with st.form("form_signin", clear_on_submit=False):
             identifier = st.text_input(
-                "Email address",
-                placeholder="jane@example.com",
+                "Email or Username",
+                placeholder="e.g. janedoe or jane@example.com",
                 key="login_ident",
             )
             password = st.text_input(
@@ -202,27 +130,27 @@ def _render_auth_forms(auth_service: SupabaseAuthService) -> None:
 
         if submit_signin:
             if not identifier.strip() or not password:
-                st.error("Please enter both your email address and password.")
+                st.error("Please enter both your username/email and password.")
             else:
-                user, auth_client, err = auth_service.authenticate(identifier, password)
+                user, err = auth_service.authenticate(identifier, password)
                 if err:
                     st.error(err)
                     st.info(
                         "Don't have an account yet? Switch to the **Create Account** tab above."
                     )
                 elif user:
-                    st.session_state[SUPABASE_AUTH_CLIENT_KEY] = auth_client
                     set_current_user(st.session_state, user)
                     st.success(f"Welcome back, {user.full_name or user.username}!")
                     st.rerun()
 
-        st.caption("Passwords and email confirmation are managed by Supabase Auth.")
+        st.caption("Passwords are cryptographically verified using PBKDF2-HMAC-SHA256.")
 
     # ── Tab 2: Create Account ──────────────────────────────────────────────────
     with tab_register, st.container(border=True):
         st.markdown("#### Create your free account")
         st.caption(
-            "Create an account to sign in with your email and password."
+            "New user? Register below to save your career preferences,"
+            " track skill goals, and get tailored resume guidance."
         )
 
         with st.form("form_register", clear_on_submit=False):
@@ -282,17 +210,10 @@ def _render_auth_forms(auth_service: SupabaseAuthService) -> None:
             elif pwd != pwd_confirm:
                 st.error("Passwords do not match. Please re-enter your password.")
             else:
-                new_user, auth_client, err = auth_service.register(
-                    username, email, full_name, pwd
-                )
+                new_user, err = auth_service.register(username, email, full_name, pwd)
                 if err:
-                    if "confirm your account" in err.lower() or "check your email" in err.lower():
-                        st.session_state["pending_verification_email"] = email.strip().lower()
-                        st.rerun()
-                    else:
-                        st.error(err)
+                    st.error(err)
                 elif new_user:
-                    st.session_state[SUPABASE_AUTH_CLIENT_KEY] = auth_client
                     set_current_user(st.session_state, new_user)
                     st.success(
                         f"Account created successfully! Welcome to Career Advisor, {new_user.full_name}."
@@ -300,9 +221,8 @@ def _render_auth_forms(auth_service: SupabaseAuthService) -> None:
                     st.rerun()
 
         st.caption(
-            "Your account is managed by Supabase Auth. We store only your display name and username "
-            "in your Supabase Auth profile; passwords are never stored by this app. Check your email "
-            "to confirm a new account before signing in."
+            "Your user data is stored in the local SQLite database. "
+            "Passwords are securely hashed with a unique per-user cryptographic salt."
         )
 
 

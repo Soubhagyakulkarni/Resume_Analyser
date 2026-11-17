@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from html import escape
 
 import streamlit as st
@@ -11,11 +10,7 @@ from models.analysis import ResumeAnalysis
 from services.jd_matcher import JDMatchResult, match_jd
 
 
-def render_jd_match_tab(
-    analysis: ResumeAnalysis,
-    resume_text: str,
-    embedder: Callable[[str], list[float]] | None = None,
-) -> None:
+def render_jd_match_tab(analysis: ResumeAnalysis, resume_text: str) -> None:
     """Full JD analysis: paste JD → get score, gaps, rewrites."""
     st.markdown(
         '<div class="section-eyebrow">Job Description Analyser</div>',
@@ -23,8 +18,8 @@ def render_jd_match_tab(
     )
     st.subheader("How well does your resume match a role?")
     st.caption(
-        "Paste the full job description below. The score combines AI semantic understanding "
-        "and exact keyword matching from the JD against your resume."
+        "Paste the full job description below. The score is based on keyword overlap "
+        "from the JD against your resume — no data is fabricated."
     )
 
     jd_text = st.text_area(
@@ -43,7 +38,7 @@ def render_jd_match_tab(
         _render_skills_chart(analysis)
         return
 
-    result: JDMatchResult = match_jd(resume_text, analysis, jd_text, embedder=embedder)
+    result: JDMatchResult = match_jd(resume_text, analysis, jd_text)
 
     if not result.all_jd_keywords:
         st.warning(
@@ -54,48 +49,50 @@ def render_jd_match_tab(
         return
 
     # ── Score gauge ─────────────────────────────────────────────────────────
-    _render_score_gauge(result)
+    _render_score_gauge(result.score)
 
     st.divider()
 
     # ── Matched / missing columns ────────────────────────────────────────────
     col_matched, col_missing = st.columns(2, gap="large")
 
-    with col_matched, st.container(border=True):
-        st.markdown(
-            '<div class="section-eyebrow">In your resume ✓</div>',
-            unsafe_allow_html=True,
-        )
-        st.subheader(f"Matched keywords ({len(result.matched_keywords)})")
-        if result.matched_keywords:
-            chips = " ".join(
-                f'<span class="skill-chip">{escape(kw)}</span>'
-                for kw in sorted(result.matched_keywords, key=str.casefold)
+    with col_matched:
+        with st.container(border=True):
+            st.markdown(
+                '<div class="section-eyebrow">In your resume ✓</div>',
+                unsafe_allow_html=True,
             )
-            st.markdown(chips, unsafe_allow_html=True)
-        else:
-            st.caption("No JD keywords found in your resume.")
+            st.subheader(f"Matched keywords ({len(result.matched_keywords)})")
+            if result.matched_keywords:
+                chips = " ".join(
+                    f'<span class="skill-chip">{escape(kw)}</span>'
+                    for kw in sorted(result.matched_keywords, key=str.casefold)
+                )
+                st.markdown(chips, unsafe_allow_html=True)
+            else:
+                st.caption("No JD keywords found in your resume.")
 
-    with col_missing, st.container(border=True):
-        st.markdown(
-            '<div class="section-eyebrow">Missing from resume ✗</div>',
-            unsafe_allow_html=True,
-        )
-        st.subheader(f"Keywords to address ({len(result.missing_keywords)})")
-        if result.missing_keywords:
-            chips = " ".join(
-                f'<span style="display:inline-block;padding:4px 10px;margin:3px;'
-                f'border-radius:20px;background:#fee2e2;color:#991b1b;'
-                f'font-size:0.82rem;font-weight:500;">{escape(kw)}</span>'
-                for kw in sorted(result.missing_keywords, key=str.casefold)
+    with col_missing:
+        with st.container(border=True):
+            st.markdown(
+                '<div class="section-eyebrow">Missing from resume ✗</div>',
+                unsafe_allow_html=True,
             )
-            st.markdown(chips, unsafe_allow_html=True)
-            st.caption(
-                "These keywords appear in the JD but were not found in your resume. "
-                "Only add them if truthful — do not invent experience."
-            )
-        else:
-            st.success("Your resume covers all detected JD keywords. 🎉")
+            st.subheader(f"Keywords to address ({len(result.missing_keywords)})")
+            if result.missing_keywords:
+                chips = " ".join(
+                    f'<span style="display:inline-block;padding:4px 10px;margin:3px;'
+                    f'border-radius:20px;background:#fee2e2;color:#991b1b;'
+                    f'font-size:0.82rem;font-weight:500;">{escape(kw)}</span>'
+                    for kw in sorted(result.missing_keywords, key=str.casefold)
+                )
+                st.markdown(chips, unsafe_allow_html=True)
+                st.caption(
+                    "These keywords appear in the JD but were not found in your resume. "
+                    "Only add them if truthful — do not invent experience."
+                )
+            else:
+                st.success("Your resume covers all detected JD keywords. 🎉")
 
     st.divider()
 
@@ -108,9 +105,8 @@ def render_jd_match_tab(
     _render_skills_chart(analysis)
 
 
-def _render_score_gauge(result: JDMatchResult) -> None:
-    """Render a large animated score circle + colour-coded label with hybrid breakdown."""
-    score = result.score
+def _render_score_gauge(score: int) -> None:
+    """Render a large animated score circle + colour-coded label."""
     if score >= 70:
         color, label = "#22c55e", "Strong match"
     elif score >= 40:
@@ -122,17 +118,6 @@ def _render_score_gauge(result: JDMatchResult) -> None:
     radius = 54
     circumference = 2 * 3.14159 * radius
     dash_offset = circumference * (1 - score / 100)
-
-    breakdown_badges = ""
-    if result.semantic_score and result.semantic_score != result.keyword_score:
-        breakdown_badges = (
-            f'<div style="display:flex;gap:0.8rem;margin-top:0.6rem;font-size:0.85rem;">'
-            f'<span style="background:rgba(99,102,241,0.12);color:#4f46e5;padding:3px 10px;border-radius:12px;font-weight:600;">'
-            f'🧠 Semantic Match: {result.semantic_score}%</span>'
-            f'<span style="background:rgba(16,185,129,0.12);color:#059669;padding:3px 10px;border-radius:12px;font-weight:600;">'
-            f'🔑 Keyword Match: {result.keyword_score}%</span>'
-            f'</div>'
-        )
 
     st.markdown(
         f"""
@@ -157,9 +142,8 @@ def _render_score_gauge(result: JDMatchResult) -> None:
           <div>
             <div style="font-size:1.35rem;font-weight:700;color:{color};">{label}</div>
             <div style="font-size:0.9rem;color:#888;margin-top:0.25rem;">
-              Hybrid match score: combines dense AI embeddings with keyword intersection.
+              Based on keyword overlap between the JD and your resume text.
             </div>
-            {breakdown_badges}
           </div>
         </div>
         """,
@@ -258,17 +242,17 @@ def _render_skills_chart(analysis: ResumeAnalysis) -> None:
         )
         fig.update_layout(
             height=max(280, len(skills) * 28),
-            margin={"l": 0, "r": 20, "t": 10, "b": 20},
-            xaxis={
-                "range": [0, 1.1],
-                "tickvals": [0, 0.55, 1.0],
-                "ticktext": ["0", "Inferred", "Evidenced"],
-                "showgrid": False,
-            },
-            yaxis={"automargin": True},
+            margin=dict(l=0, r=20, t=10, b=20),
+            xaxis=dict(
+                range=[0, 1.1],
+                tickvals=[0, 0.55, 1.0],
+                ticktext=["0", "Inferred", "Evidenced"],
+                showgrid=False,
+            ),
+            yaxis=dict(automargin=True),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font={"family": "Inter, sans-serif", "size": 12, "color": "#e2e8f0"},
+            font=dict(family="Inter, sans-serif", size=12, color="#e2e8f0"),
             showlegend=False,
         )
         st.plotly_chart(fig, use_container_width=True)
