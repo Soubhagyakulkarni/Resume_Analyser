@@ -31,7 +31,7 @@ def test_resume_sections_follow_fresher_resume_sequence():
     )
 
     assert [heading for heading, _ in build_resume_sections(draft)] == [
-        "Profile",
+        "Professional Summary",
         "Education",
         "Experience",
         "Projects",

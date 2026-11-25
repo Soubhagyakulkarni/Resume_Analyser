@@ -7,9 +7,9 @@ import logging
 import streamlit as st
 
 from app.components.career_profile import render_career_profile_form
-from app.components.footer import render_footer
 from app.components.home_sections import (
     maybe_load_sample_resume,
+    render_hero,
     render_how_it_works,
     render_value_cards,
 )
@@ -52,38 +52,7 @@ def render_analyze_page(
 ) -> None:
     has_results = st.session_state.get(ANALYSIS_KEY) is not None
 
-    # ── Hero ────────────────────────────────────────────────────────────────
-    st.markdown(
-        """
-        <div class="app-brand">
-          <span class="app-brand-mark">R</span> Career clarity, one resume at a time
-        </div>
-        <div class="hero-kicker">Your next career move starts here</div>
-        <h1>Understand your resume.<br><span class="hero-gradient-text">Discover fitting roles.</span><br>Plan your next skill.</h1>
-        <p class="hero-copy">
-          AI-powered resume insights, relevant job exploration, and a practical
-          skill-development plan — grounded in what your resume actually says.
-        </p>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Step progress
-    current_step = 3 if has_results else 1
-    steps = [("1", "Add resume"), ("2", "AI review"), ("3", "Career plan")]
-    progress_html = '<div class="step-track" aria-label="Analysis steps">'
-    for index, (number, label) in enumerate(steps, start=1):
-        state_class = "done" if index < current_step else "active" if index == current_step else ""
-        symbol = "✓" if index < current_step else number
-        progress_html += (
-            f'<div class="step-item {state_class}">'
-            f'<span class="step-number">{symbol}</span>'
-            f"<span>{label}</span></div>"
-        )
-        if index < len(steps):
-            progress_html += '<span class="step-divider" aria-hidden="true">›</span>'
-    progress_html += "</div>"
-    st.markdown(progress_html, unsafe_allow_html=True)
+    render_hero(has_results)
 
     current_user = get_current_user(st.session_state)
     if current_user is not None:
@@ -105,10 +74,7 @@ def render_analyze_page(
     if sample_text is not None:
         st.session_state[DEMO_MODE_KEY] = True
     if st.session_state.get(DEMO_MODE_KEY):
-        st.info(
-            "Demo resume loaded — synthetic data only. Review it below; analysis still "
-            "requires your consent."
-        )
+        st.info("Sample loaded. Review it before analysis.")
         if st.button("Clear demo resume", key="clear_demo_resume"):
             st.session_state.pop(DEMO_MODE_KEY, None)
             st.session_state["resume_pasted_text"] = ""
@@ -124,11 +90,11 @@ def render_analyze_page(
             max_upload_bytes, max_resume_chars, initial_text=sample_text
         )
         st.caption(
-            f"Accepted formats: PDF, DOCX, or TXT  ·  Maximum "
-            f"{max_upload_bytes // (1024 * 1024)} MB per file"
+            f"PDF, DOCX, or TXT · Up to {max_upload_bytes // (1024 * 1024)} MB per file"
         )
-        st.caption("Resume text is sent to the AI provider only after you give consent below.")
-        st.caption("This tool provides career guidance, not hiring decisions.")
+        st.caption(
+            "Shared with AI only after consent. Results are career guidance, not hiring decisions."
+        )
 
     # ── Career profile (optional, collapsible) ───────────────────────────────
     with st.expander("Personalise your guidance (optional)", expanded=False):
@@ -241,7 +207,7 @@ def render_analyze_page(
                     type(exc).__name__,
                 )
 
-            st.success("Your resume review is ready. Go to the Results page to see your insights.")
+            st.success("Analysis complete. Your results appear below.")
 
         except ApplicationError as exc:
             logger.warning(
@@ -266,5 +232,3 @@ def render_analyze_page(
     if not has_results:
         render_value_cards()
     render_how_it_works()
-
-    render_footer()

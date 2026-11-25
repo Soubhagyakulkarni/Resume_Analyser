@@ -4,20 +4,20 @@
 
 | Document detail | Value |
 |---|---|
-| Status | Proposed |
-| Version | 1.0 |
-| Last updated | 2026-10-05 |
+| Status | Supabase integration in progress |
+| Version | 1.2 |
+| Last updated | 2026-11-16 |
 | Product requirements | [PRD.md](./PRD.md) |
 | Architecture | [SOFTWARE_ARCH.md](./SOFTWARE_ARCH.md) |
-| Runtime stack | Streamlit, Python, OpenAI GPT, SQLite |
+| Runtime stack | Streamlit, Python, Gemini/OpenAI, Supabase Auth, PostgreSQL |
 | Test stack | pytest |
 
 ## 1. Design Principles
 
 - **Modularity:** Separate Streamlit presentation, application workflows, domain models, and external adapters.
-- **Testability:** Keep business rules independent of Streamlit, OpenAI, and live SQLite data; inject interfaces and use test doubles.
+- **Testability:** Keep business rules independent of Streamlit, AI providers, and live Supabase data; inject interfaces and use test doubles.
 - **Maintainability:** Give each module one clear responsibility, validate data at boundaries, and keep configuration out of business logic.
-- **Scalability:** Begin as a modular monolith; isolate SQLite and AI behind replaceable adapters. Keep user resumes/results transient by default as specified in the architecture.
+- **Scalability:** Keep Supabase and AI behind replaceable adapters. Keep user resumes/results transient by default as specified in the architecture.
 - **Privacy:** Use synthetic test data, do not log resume content, and do not commit secrets, real resumes, reports, or production database files.
 
 This document describes the implemented scaffold and its intended module boundaries.
@@ -88,9 +88,9 @@ resume-analyzer/
 │   └── resume_pdf_renderer.py
 ├── repositories/
 │   ├── __init__.py
-│   ├── sqlite_job_repository.py
+│   ├── supabase_job_repository.py
 │   └── migrations/
-│       └── 001_create_job_catalog.sql
+│       └── 003_supabase_job_catalog.sql
 ├── services/
 │   ├── __init__.py
 │   ├── ports.py
@@ -105,7 +105,8 @@ resume-analyzer/
 │   ├── identifiers.py
 │   └── text_safety.py
 ├── scripts/
-│   └── refresh_job_catalog.py
+│   ├── refresh_job_catalog.py
+│   └── migrate_sqlite_jobs_to_supabase.py  # One-time read-only legacy catalog import
 ├── data/
 │   └── .gitkeep
 ├── tests/
@@ -120,7 +121,7 @@ resume-analyzer/
 │   │   ├── test_analysis_service.py
 │   │   └── test_recommendation_service.py
 │   ├── integration/
-│   │   ├── test_sqlite_job_repository.py
+│   │   ├── test_supabase_job_repository.py
 │   │   └── test_analysis_workflow.py
 │   ├── contract/
 │   │   └── test_openai_gateway.py
@@ -164,7 +165,7 @@ All resume fixtures must be synthetic and non-identifying. `data/` is for a runt
 
 | File | Purpose and responsibilities |
 |---|---|
-| `app/config/settings.py` | Canonical settings loader and validator. Reads local `.env` for development and protected environment/secret injection in deployment; validates model, timeouts, upload/text bounds, database path, and log level. Contains no secret values. |
+| `app/config/settings.py` | Canonical settings loader and validator. Reads local `.env` for development and protected environment/secret injection in deployment; validates model, timeouts, upload/text bounds, Supabase settings, and log level. Contains no secret values. |
 | `app/utils/logging_config.py` | Canonical logging setup, configured once at startup. Root `config/logging_config.py` is a compatibility import. |
 | `app/utils/errors.py`, `app/utils/identifiers.py`, `app/utils/text_safety.py` | Canonical error types, opaque IDs, and evidence-safe text helpers, imported by the UI and service layer to avoid Streamlit path collisions. |
 | `config/settings.py` | Compatibility import for `app.config.settings`, retained for existing architecture/import paths. |
@@ -226,8 +227,8 @@ All resume fixtures must be synthetic and non-identifying. `data/` is for a runt
 
 | File | Purpose and responsibilities |
 |---|---|
-| `repositories/sqlite_job_repository.py` | Implements catalog reads and controlled refresh writes with parameterized SQL, transaction boundaries, and freshness/source metadata. Does not store resumes or analysis results by default. |
-| `repositories/migrations/001_create_job_catalog.sql` | Creates the initial normalized job/catalog-source schema. Migrations are ordered, repeatable under the migration runner, and contain no data secrets. |
+| `repositories/supabase_job_repository.py` | Implements authorized catalog reads and controlled PostgreSQL refresh through a service-role-only RPC. Does not store resumes or analysis results. |
+| `repositories/migrations/003_supabase_job_catalog.sql` | Creates the PostgreSQL job catalog and server-only catalog refresh RPC. |
 | `repositories/__init__.py` | Package marker; exports repository factory only if needed. |
 
 ### `reports/` — output rendering
@@ -248,11 +249,11 @@ All resume fixtures must be synthetic and non-identifying. `data/` is for a runt
 
 | File | Purpose and responsibilities |
 |---|---|
-| `tests/conftest.py` | Shared pytest fixtures: temporary SQLite databases, fake AI gateway, synthetic models, and deterministic settings. |
+| `tests/conftest.py` | Shared pytest fixtures: fake AI gateway, synthetic models, and deterministic settings. |
 | `tests/fixtures/sample_resume.pdf`, `sample_resume.docx` | Synthetic, non-personal parser/UI fixtures only. |
 | `tests/fixtures/sample_analysis.json`, `sample_jobs.csv` | Synthetic AI output and job catalog fixtures; never import sample listings as live vacancies. |
 | `tests/unit/` | Fast isolated tests for validation, evidence rules, career profile framing, readiness, next actions, recommendation sorting, skill tiers, PDF assembly, and error mapping. |
-| `tests/integration/` | Tests for SQLite repository, migrations, parser-to-service workflow, and report assembly using temporary resources. |
+| `tests/integration/` | Tests for repository behavior, migrations, parser-to-service workflow, and report assembly using test doubles. |
 | `tests/contract/` | Tests for OpenAI and Gemini adapter request/response contracts and provider-error normalization using fakes/synthetic responses. |
 | `tests/ui/` | Streamlit workflow tests for synthetic demo/consent, job filters, dashboard empty states, visible failures, results, and report download. |
 | `scripts/refresh_job_catalog.py` | Explicitly invoked, authorized catalog import/refresh command with validation, provenance, and safe failure reporting. |
@@ -297,7 +298,7 @@ tests/   ─────────► all production modules (never the revers
 - `app/` calls `services/` and renders returned models. It must not call OpenAI or execute SQL directly.
 - `services/` depends on `models/` and abstract ports defined in `services/ports.py`. Concrete adapters are supplied during application startup through dependency injection.
 - `integrations/`, `repositories/`, `parsers/`, and `reports/` implement contracts and may depend on `models/`, `config/`, and narrowly scoped `utils/`; they must not depend on Streamlit pages.
-- `models/` must not import `app/`, `services/`, Streamlit, OpenAI SDK, or SQLite adapters.
+- `models/` must not import `app/`, `services/`, Streamlit, AI SDKs, or database adapters.
 - `config/` loads and validates settings but must not perform analysis, database queries, or network calls on import.
 - `prompts/` contains static assets and loading logic only. Resume content is bound at runtime as untrusted input; prompts never import UI code or contain credentials.
 - `utils/` must not import higher-level application modules. Avoid circular dependencies and generic helper modules that accumulate business rules.
@@ -305,13 +306,13 @@ tests/   ─────────► all production modules (never the revers
 
 ### Main runtime dependency composition
 
-At startup, `app/main.py` loads validated settings and configures logging, creates the SQLite job repository and OpenAI gateway, injects those adapters into application services, and exposes the services to Streamlit page handlers. Services receive protocols rather than concrete SDK/database clients. Unit tests construct services with fake protocol implementations; repository integration tests use a temporary SQLite database.
+At startup, `app/main.py` loads validated settings, connects to Supabase, creates the PostgreSQL job repository and configured AI gateway, injects those adapters into application services, and exposes services to Streamlit page handlers. Supabase Auth manages email/password accounts. Unit tests construct services with fake protocol implementations.
 
 ## 6. Modularity and Growth Path
 
 - Keep the initial application a single deployable modular monolith; do not split services into networked microservices without measured need.
 - Keep provider-specific calls within their integration gateway; changing provider should not require editing pages or recommendation rules.
-- Keep job storage behind a repository contract. SQLite suits the initial, modest single-writer catalog; use the same contract to migrate to PostgreSQL if measured concurrency or availability needs exceed SQLite.
+- Keep job storage behind a repository contract. Supabase PostgreSQL is the catalog store; keep its service-role key server-side and enforce RLS on profile data.
 - If authentication, counselor sharing, or institution dashboards are added, introduce explicit identity, authorization, consent, and tenant boundaries before adding persistent resume/result records.
 - Add new parsers, job sources, or report formats as adapters while retaining the existing service contracts.
 

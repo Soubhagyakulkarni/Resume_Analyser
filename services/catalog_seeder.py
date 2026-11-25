@@ -1,4 +1,4 @@
-"""Automatic seeder and sync service for the SQLite job catalog."""
+"""Automatic seeder and sync service for the PostgreSQL job catalog."""
 
 from __future__ import annotations
 
@@ -8,16 +8,17 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from app.config.settings import Settings
+from app.utils.errors import CatalogUnavailableError, JobSourceUnavailableError
 from integrations.adzuna_job_client import AdzunaJobClient
 from models.job import Job
-from repositories.sqlite_job_repository import SQLiteJobRepository
+from services.ports import JobRepository
 
 logger = logging.getLogger(__name__)
 SEED_CATALOG_PATH = Path(__file__).resolve().parents[1] / "data" / "seed_catalog.json"
 
 
 def ensure_job_catalog(
-    repository: SQLiteJobRepository,
+    repository: JobRepository,
     settings: Settings,
     force_refresh: bool = False,
     search_query: str | None = None,
@@ -40,7 +41,7 @@ def ensure_job_catalog(
             ]
             if len(fresh_with_skills) >= 10:
                 return len(fresh_with_skills)
-        except Exception as exc:
+        except CatalogUnavailableError as exc:
             logger.warning("Could not inspect existing job catalog: %s", exc)
 
     adzuna_jobs: list[Job] = []
@@ -57,7 +58,7 @@ def ensure_job_catalog(
             if batch:
                 adzuna_jobs.extend(batch)
                 logger.info("Retrieved %d live listings from Adzuna", len(batch))
-        except Exception as exc:
+        except JobSourceUnavailableError as exc:
             logger.warning("Adzuna fetch failed; falling back to seed catalog: %s", exc)
 
     seed_jobs: list[Job] = []
@@ -80,7 +81,7 @@ def ensure_job_catalog(
                         updated_at=today,
                     )
                 )
-        except Exception as exc:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             logger.warning("Failed to load seed catalog JSON: %s", exc)
 
     seen_ids: set[str] = set()

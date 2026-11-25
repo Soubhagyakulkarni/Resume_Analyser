@@ -61,3 +61,25 @@ def test_resume_pdf_preserves_builder_section_order():
     extracted = "\n".join(page.extract_text() for page in PdfReader(BytesIO(pdf)).pages)
 
     assert extracted.index("Projects") < extracted.index("Education")
+
+
+def test_resume_pdf_keeps_entry_details_in_readable_single_column_text():
+    pdf = ResumePdfRenderer().render(
+        "Asha Student",
+        "asha@example.com | Pune",
+        [
+            (
+                "Experience",
+                (
+                    "Data Analyst Intern | Example Co | Jun 2024 - Aug 2024\n"
+                    "• Analyzed 1,200 records and reduced manual reporting by 20%"
+                ),
+            )
+        ],
+    )
+    extracted = " ".join(
+        page.extract_text() for page in PdfReader(BytesIO(pdf)).pages
+    )
+
+    assert "Data Analyst Intern | Example Co | Jun 2024 - Aug 2024" in extracted
+    assert "- Analyzed 1,200 records and reduced manual reporting by 20%" in extracted

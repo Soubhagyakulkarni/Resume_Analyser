@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 import streamlit as st
 
@@ -13,7 +14,6 @@ from app.session_state import (
     ANALYSIS_KEY,
     BROWSE_JOBS_KEY,
     CAREER_PROFILE_KEY,
-    CORRELATION_ID_KEY,
     JOB_CATALOG_STATUS_KEY,
     JOB_SEARCH_PREFERENCES_KEY,
     RECOMMENDATION_ERROR_KEY,
@@ -28,8 +28,6 @@ from models.analysis import ResumeAnalysis
 from services.career_profile import CareerProfile
 from services.recommendation_service import JobSearchPreferences, RecommendationService
 from services.report_service import ReportService
-from services.resume_quality_service import ResumeQualityService
-from services.skill_development_service import SkillDevelopmentService
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +35,7 @@ logger = logging.getLogger(__name__)
 def render_results_page(
     report_service: ReportService,
     recommendation_service: RecommendationService,
+    embedder: Callable[[str], list[float]] | None = None,
 ) -> None:
     analysis: ResumeAnalysis | None = st.session_state.get(ANALYSIS_KEY)
     recommendations = st.session_state.get(RECOMMENDATIONS_KEY, [])
@@ -55,65 +54,10 @@ def render_results_page(
 
     # ── Page header ──────────────────────────────────────────────────────────
     st.markdown(
-        '<div class="section-eyebrow">Your personalised report</div>', unsafe_allow_html=True
+        '<div class="section-eyebrow">Your report</div>', unsafe_allow_html=True
     )
-    st.header("Your resume review")
+    st.header("Resume review")
     st.caption("AI-generated career guidance — not a hiring decision.")
-
-    # ── Job search filters ────────────────────────────────────────────────────
-    with st.expander("Refine your job search", expanded=False):
-        st.caption(
-            "Optional filters narrow the job list; they do not resubmit your resume analysis."
-        )
-        role_column, location_column = st.columns(2)
-        with role_column:
-            role_input = st.text_input(
-                "Target roles",
-                value=", ".join(preferences.role_keywords),
-                placeholder="e.g. software engineer, data analyst",
-                max_chars=200,
-                help="Separate role-title keywords with commas. Leave blank for any role.",
-                key="job_role_filter_input",
-            )
-        with location_column:
-            location_input = st.text_input(
-                "Preferred location",
-                value=preferences.location,
-                placeholder="e.g. Bengaluru or India",
-                max_chars=100,
-                help="Searches listing locations. Leave blank for any location.",
-                key="job_location_filter_input",
-            )
-        filter_col, refresh_col = st.columns([1, 1])
-        with filter_col:
-            if st.button("Apply job filters", type="primary"):
-                preferences = JobSearchPreferences(
-                    role_keywords=tuple(
-                        keyword.strip()[:80] for keyword in role_input.split(",") if keyword.strip()
-                    )[:8],
-                    location=location_input.strip(),
-                )
-                st.session_state[JOB_SEARCH_PREFERENCES_KEY] = preferences
-                _refresh_recommendation_state(
-                    analysis,
-                    recommendation_service,
-                    preferences,
-                    success_message="Job filters applied.",
-                )
-        with refresh_col:
-            if st.button(
-                "Refresh job recommendations",
-                help="Recheck the current job catalog without resubmitting your resume.",
-            ):
-                correlation_id = new_correlation_id()
-                st.session_state[CORRELATION_ID_KEY] = correlation_id
-                _refresh_recommendation_state(
-                    analysis,
-                    recommendation_service,
-                    preferences,
-                    success_message="Job recommendations refreshed from the current catalog.",
-                    correlation_id=correlation_id,
-                )
 
     # ── Pre-generate report bytes (once per render) ───────────────────────────
     recommendations = st.session_state.get(RECOMMENDATIONS_KEY, [])
@@ -166,6 +110,7 @@ def render_results_page(
         profile=profile,
         report_bytes=report_bytes,
         resume_text=st.session_state.get(RESUME_TEXT_KEY, ""),
+        embedder=embedder,
     )
 
     render_footer()
@@ -179,72 +124,10 @@ def render_results_page(
 def _render_empty_results() -> None:
     """Show a helpful empty state when no analysis has been run yet."""
     st.markdown('<div class="section-eyebrow">Results</div>', unsafe_allow_html=True)
-    st.header("Your resume insights will appear here")
+    st.header("No results yet")
     st.markdown(
-        "Start by uploading or pasting your resume on the **Analyze resume page**."
-        "  Once the AI review is complete, your career insights, matched roles,"
-        " skill-development plan, and downloadable report will appear here."
+        "Analyze your resume to view feedback, job matches, a skills plan, and your report."
     )
     st.caption(
-        "Your resume text is sent to the AI provider only after you give consent."
-        "  Results are held in your active session and are not stored."
+        "Resume text is sent to AI only after consent; results stay in your session, not the database."
     )
-
-
-def _refresh_recommendation_state(
-    analysis: ResumeAnalysis,
-    recommendation_service: RecommendationService,
-    preferences: JobSearchPreferences,
-    success_message: str,
-    correlation_id: str | None = None,
-) -> None:
-    correlation_id = correlation_id or new_correlation_id()
-    st.session_state[CORRELATION_ID_KEY] = correlation_id
-    try:
-        from app.config.settings import Settings
-        from services.catalog_seeder import ensure_job_catalog
-
-        what_term = preferences.role_keywords[0] if preferences.role_keywords else None
-        ensure_job_catalog(
-            recommendation_service._repository,
-            Settings.from_environment(),
-            force_refresh=True,
-            search_query=what_term,
-            location_query=preferences.location or None,
-        )
-        recommendations = recommendation_service.recommend(analysis, preferences=preferences)
-        catalog_status = recommendation_service.catalog_status(preferences)
-        browse_jobs = recommendation_service.current_jobs(limit=8, preferences=preferences)
-        relevant_jobs = recommendation_service.current_jobs(limit=100, preferences=preferences)
-    except ApplicationError as exc:
-        st.session_state[RECOMMENDATION_ERROR_KEY] = exc.user_message
-        st.session_state[JOB_CATALOG_STATUS_KEY] = None
-        st.session_state[BROWSE_JOBS_KEY] = []
-        resume_text = st.session_state.get(RESUME_TEXT_KEY, "")
-        profile: CareerProfile = st.session_state.get(CAREER_PROFILE_KEY, CareerProfile())
-        st.session_state[RESUME_QUALITY_KEY] = ResumeQualityService().evaluate(
-            resume_text, career_stage=profile.stage
-        )
-        st.session_state[SKILL_DEVELOPMENT_PLAN_KEY] = []
-        logger.warning(
-            "Recommendation refresh failed correlation_id=%s error_code=%s",
-            correlation_id,
-            type(exc).__name__,
-        )
-        return
-
-    st.session_state[RECOMMENDATIONS_KEY] = recommendations
-    st.session_state[JOB_CATALOG_STATUS_KEY] = catalog_status
-    st.session_state[BROWSE_JOBS_KEY] = browse_jobs
-    resume_text = st.session_state.get(RESUME_TEXT_KEY, "")
-    profile: CareerProfile = st.session_state.get(CAREER_PROFILE_KEY, CareerProfile())
-    st.session_state[RESUME_QUALITY_KEY] = ResumeQualityService().evaluate(
-        resume_text,
-        relevant_jobs,
-        career_stage=profile.stage,
-    )
-    st.session_state[SKILL_DEVELOPMENT_PLAN_KEY] = SkillDevelopmentService().build_plan(
-        analysis, relevant_jobs, resume_text=resume_text
-    )
-    st.session_state[RECOMMENDATION_ERROR_KEY] = None
-    st.success(success_message)

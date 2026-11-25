@@ -10,6 +10,7 @@ _RETRYABLE = (ProviderUnavailableError, ProviderRateLimitError)
 
 def show_application_error(error: ApplicationError, correlation_id: str) -> None:
     st.error(f"{error.user_message} Reference: {correlation_id}")
-    if isinstance(error, _RETRYABLE):
-        if st.button("🔄 Try Again", key="retry_analysis_btn", type="primary"):
-            st.rerun()
+    if isinstance(error, _RETRYABLE) and st.button(
+        "🔄 Try Again", key="retry_analysis_btn", type="primary"
+    ):
+        st.rerun()

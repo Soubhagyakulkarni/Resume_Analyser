@@ -5,8 +5,10 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
+from streamlit.errors import StreamlitSecretNotFoundError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(PROJECT_ROOT / ".env", override=False)
@@ -24,8 +26,8 @@ def _get_config(key: str, default: str | None = None) -> str | None:
             sec_val = st.secrets[key]
             if sec_val is not None:
                 return str(sec_val)
-    except Exception:
-        pass
+    except StreamlitSecretNotFoundError:
+        return default
     return default
 
 
@@ -40,13 +42,14 @@ class Settings:
     openai_max_retries: int
     max_upload_bytes: int
     max_resume_chars: int
-    sqlite_database_path: Path
     job_listing_max_age_days: int
     adzuna_app_id: str | None
     adzuna_app_key: str | None
     adzuna_country_code: str
     log_level: str
-    sqlite_user_database_path: Path = Path(PROJECT_ROOT / "data" / "users.sqlite3")
+    supabase_url: str | None = None
+    supabase_anon_key: str | None = None
+    supabase_service_role_key: str | None = None
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -98,15 +101,21 @@ class Settings:
         if not re.fullmatch(r"[a-z]{2}", adzuna_country_code):
             raise ValueError("ADZUNA_COUNTRY_CODE must be a two-letter country code")
 
-        database_path = Path(
-            _get_config("SQLITE_DATABASE_PATH", str(PROJECT_ROOT / "data" / "jobs.sqlite3")) or ""
-        ).expanduser()
-        user_database_path = Path(
-            _get_config("SQLITE_USER_DATABASE_PATH", str(PROJECT_ROOT / "data" / "users.sqlite3")) or ""
-        ).expanduser()
-
         openai_key = (_get_config("OPENAI_API_KEY") or "").strip() or None
         gemini_key = (_get_config("GEMINI_API_KEY") or "").strip() or None
+        supabase_url = (_get_config("SUPABASE_URL") or "").strip().rstrip("/") or None
+        supabase_anon_key = (_get_config("SUPABASE_ANON_KEY") or "").strip() or None
+        supabase_service_role_key = (
+            (_get_config("SUPABASE_SERVICE_ROLE_KEY") or "").strip() or None
+        )
+        if supabase_url:
+            parsed_url = urlparse(supabase_url)
+            local_http = parsed_url.scheme == "http" and parsed_url.hostname in {
+                "localhost",
+                "127.0.0.1",
+            }
+            if not parsed_url.netloc or (parsed_url.scheme != "https" and not local_http):
+                raise ValueError("SUPABASE_URL must use HTTPS (HTTP is allowed for localhost)")
         adzuna_id = (_get_config("ADZUNA_APP_ID") or "").strip() or None
         adzuna_key = (_get_config("ADZUNA_APP_KEY") or "").strip() or None
         log_level = (_get_config("LOG_LEVEL", "INFO") or "INFO").strip().upper()
@@ -121,11 +130,12 @@ class Settings:
             openai_max_retries=retries,
             max_upload_bytes=upload_limit,
             max_resume_chars=text_limit,
-            sqlite_database_path=database_path,
+            supabase_url=supabase_url,
+            supabase_anon_key=supabase_anon_key,
+            supabase_service_role_key=supabase_service_role_key,
             job_listing_max_age_days=job_max_age,
             adzuna_app_id=adzuna_id,
             adzuna_app_key=adzuna_key,
             adzuna_country_code=adzuna_country_code,
             log_level=log_level,
-            sqlite_user_database_path=user_database_path,
         )

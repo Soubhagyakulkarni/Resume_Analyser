@@ -32,7 +32,7 @@ class ResumeDraft:
 def build_resume_sections(draft: ResumeDraft) -> list[tuple[str, str]]:
     """Return non-empty, ordered sections without inventing missing information."""
     candidates = (
-        ("Profile", draft.summary),
+        ("Professional Summary", draft.summary),
         ("Education", draft.education),
         ("Experience", draft.experience),
         ("Projects", draft.projects),
@@ -188,9 +188,10 @@ def extract_contact_from_text(text: str) -> str:
                 and not _EMAIL_RE.search(seg)
                 and not _PHONE_RE.search(seg)
                 and not _URL_RE.search(seg)
+                and "," in seg
+                and len(seg) < 50
             ):
-                if "," in seg and len(seg) < 50:
-                    parts.append(seg)
+                parts.append(seg)
 
     return "  |  ".join(dict.fromkeys(parts))  # deduplicate preserving order
 
@@ -207,9 +208,9 @@ def review_resume_draft(draft: ResumeDraft) -> tuple[int, list[tuple[str, str, s
             "Add your name and a professional email address.",
         ),
         (
-            "Profile",
+            "Professional Summary",
             "Complete" if len(draft.summary.split()) >= 20 else "Add detail",
-            "Write a focused 2–4 line profile with your direction and strongest evidence.",
+            "Write a concise summary with relevant skills and evidence.",
         ),
         (
             "Education",

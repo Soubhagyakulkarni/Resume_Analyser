@@ -56,25 +56,3 @@ class JobSourceUnavailableError(ApplicationError):
 
 class ReportGenerationError(ApplicationError):
     user_message = "The report could not be generated. Please try again."
-
-
-class AuthenticationError(ApplicationError):
-    """Base error for authentication failures."""
-
-    user_message = "Authentication failed. Please check your credentials and try again."
-
-
-class InvalidCredentialsError(AuthenticationError):
-    user_message = "Invalid username/email or password."
-
-
-class UserAlreadyExistsError(AuthenticationError):
-    user_message = "An account with this username or email already exists."
-
-
-class UserRegistrationError(AuthenticationError):
-    user_message = "Registration could not be completed. Please check your inputs and try again."
-
-
-class UserDatabaseUnavailableError(ApplicationError):
-    user_message = "The user database is temporarily unavailable. Please try again shortly."

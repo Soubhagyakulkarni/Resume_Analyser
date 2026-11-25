@@ -23,6 +23,10 @@ DEMO_MODE_KEY = "demo_mode"
 
 # Logged-in authenticated user identity; preserved across analyses.
 AUTH_USER_KEY = "authenticated_user"
+SUPABASE_AUTH_CLIENT_KEY = "supabase_auth_client"
+PASSWORD_RESET_EMAIL_KEY = "pending_password_reset_email"
+PASSWORD_RESET_REQUEST_KEY = "show_password_reset"
+PASSWORD_RESET_SUCCESS_KEY = "password_reset_success"
 
 
 def get_current_user(state: MutableMapping[str, Any]) -> Any | None:
@@ -41,6 +45,7 @@ def set_current_user(state: MutableMapping[str, Any], user: Any | None) -> None:
 def logout_user(state: MutableMapping[str, Any]) -> None:
     """Log out the current user by removing the authenticated user from session state."""
     state.pop(AUTH_USER_KEY, None)
+    state.pop(SUPABASE_AUTH_CLIENT_KEY, None)
 
 
 def clear_analysis_state(state: MutableMapping[str, Any]) -> None:

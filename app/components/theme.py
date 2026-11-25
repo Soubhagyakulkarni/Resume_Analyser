@@ -3,53 +3,53 @@
 import streamlit as st
 
 
-def apply_app_theme() -> None:
-    """Apply the modern, professional SaaS visual theme with pastel accents and pill shapes."""
+def apply_app_theme(dark_mode: bool = False) -> None:
+    """Apply the shared light or dark SaaS theme."""
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
 
         /* ── Monday.com Design Tokens ──────────────────────────────────── */
         :root {
             /* Colors */
-            --color-monday-violet: #6161ff;
-            --color-monday-violet-hover: #4b4be0;
-            --color-ink: #333333;
-            --color-slate: #535768;
-            --color-iron: #808080;
-            --color-fog: #cacbcd;
-            --color-mist: #d0d4e4;
-            --color-pebble: #dddfeb;
-            --color-cloud: #f5f6f8;
+            --color-monday-violet: #405bd8;
+            --color-monday-violet-hover: #3048b8;
+            --color-ink: #17263d;
+            --color-slate: #4f5f76;
+            --color-iron: #68778c;
+            --color-fog: #d5deeb;
+            --color-mist: #dce5f0;
+            --color-pebble: #e8eef6;
+            --color-cloud: #f5f8fc;
             --color-snow: #ffffff;
-            --color-shadow-dust: #e6e7ea;
+            --color-shadow-dust: #e5ebf3;
 
             /* Pastels */
-            --color-mint: #bcfe90;
-            --color-mint-soft: #f0fce8;
-            --color-mint-dark: #1b5e20;
-            --color-sky: #abf0ff;
-            --color-sky-soft: #edfaff;
-            --color-apricot: #ff8940;
-            --color-apricot-soft: #fff2ea;
-            --color-lavender: #eddff7;
-            --color-lavender-soft: #f8f3fc;
-            --color-periwinkle: #e7ecff;
-            --color-periwinkle-wash: #dbdbff;
-            --color-aqua: #d1faff;
+            --color-mint: #ccebdd;
+            --color-mint-soft: #eef8f2;
+            --color-mint-dark: #23684a;
+            --color-sky: #cceaf6;
+            --color-sky-soft: #eef7fb;
+            --color-apricot: #f4a261;
+            --color-apricot-soft: #fff2e5;
+            --color-lavender: #e5e8f7;
+            --color-lavender-soft: #f3f4fb;
+            --color-periwinkle: #e2eaff;
+            --color-periwinkle-wash: #cbd9fa;
+            --color-aqua: #d7f2f1;
 
             /* Aliases mapped to original tokens for full backward compatibility */
-            --brand: #6161ff;
-            --brand-dark: #4b4be0;
-            --brand-soft: #f0f1ff;
-            --ink: #333333;
-            --muted: #535768;
-            --line: #d0d4e4;
+            --brand: #405bd8;
+            --brand-dark: #3048b8;
+            --brand-soft: #eef1ff;
+            --ink: #17263d;
+            --muted: #4f5f76;
+            --line: #dce5f0;
             --surface: #ffffff;
-            --page: #f5f6f8;
-            --success: #1b5e20;
-            --success-soft: #f0fce8;
+            --page: #f5f8fc;
+            --success: #23684a;
+            --success-soft: #eef8f2;
             --warning: #b45309;
             --warning-soft: #fffbeb;
             --error: #b91c1c;
@@ -58,7 +58,8 @@ def apply_app_theme() -> None:
             --info-soft: #f0f9ff;
 
             /* Typography */
-            --font-poppins: 'Poppins', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-heading: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
             /* Radii */
             --radius-sm: 8px;
@@ -69,10 +70,10 @@ def apply_app_theme() -> None:
             --radius-button: 160px;
 
             /* Shadows */
-            --shadow-card: rgba(205, 208, 223, 0.4) 0px 4px 32px 0px;
-            --shadow-card-hover: rgba(0, 0, 0, 0.12) 0px 8px 36px 0px;
+            --shadow-card: rgba(24, 43, 74, 0.07) 0px 4px 28px 0px;
+            --shadow-card-hover: rgba(24, 43, 74, 0.12) 0px 8px 36px 0px;
             --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.06);
-            --shadow-button: 0 4px 14px rgba(97, 97, 255, 0.28);
+            --shadow-button: 0 4px 14px rgba(64, 91, 216, 0.24);
         }
 
         /* ── Typography Guarantee ───────────────────────────────────────── */
@@ -81,7 +82,6 @@ def apply_app_theme() -> None:
         [data-testid="stSidebar"],
         [data-testid="stMainBlockContainer"],
         p, li, a, label,
-        h1, h2, h3, h4, h5, h6,
         input, select, textarea,
         .stButton > button,
         .stDownloadButton > button,
@@ -91,7 +91,13 @@ def apply_app_theme() -> None:
         [data-testid="stMarkdownContainer"] p,
         [data-testid="stMarkdownContainer"] li,
         [data-testid="stCaptionContainer"] p {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-family: var(--font-body) !important;
+        }
+
+        h1, h2, h3, h4, h5, h6,
+        .sidebar-brand-name,
+        .value-card-title {
+            font-family: var(--font-heading) !important;
         }
 
         /* ── Streamlit Material Symbols & Icon Font Protection ──────────── */
@@ -120,8 +126,8 @@ def apply_app_theme() -> None:
         .stApp {
             background-color: var(--color-cloud) !important;
             background-image:
-                radial-gradient(circle at 92% 5%, rgba(97, 97, 255, 0.06), transparent 30rem),
-                radial-gradient(circle at 10% 90%, rgba(188, 254, 144, 0.08), transparent 25rem) !important;
+                radial-gradient(circle at 92% 5%, rgba(64, 91, 216, 0.06), transparent 30rem),
+                radial-gradient(circle at 10% 90%, rgba(41, 154, 143, 0.06), transparent 25rem) !important;
             color: var(--color-ink);
         }
 
@@ -181,7 +187,7 @@ def apply_app_theme() -> None:
 
         /* ── Hero Gradient Text (Monday.com Signature) ─────────────────── */
         .hero-gradient-text {
-            background: linear-gradient(90deg, #6161ff 0%, #fe81e4 50%, #fda900 100%) !important;
+            background: linear-gradient(90deg, #405bd8 0%, #258f9a 55%, #5d8ce8 100%) !important;
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             background-clip: text !important;
@@ -272,6 +278,7 @@ def apply_app_theme() -> None:
         }
 
         .sidebar-brand-name {
+            font-family: var(--font-heading);
             font-weight: 700;
             font-size: 1.05rem;
             color: var(--color-ink);
@@ -409,9 +416,9 @@ def apply_app_theme() -> None:
             letter-spacing: -0.01em !important;
         }
 
-        .stButton > button[kind="primary"],
-        .stFormSubmitButton > button[kind="primary"],
-        .stDownloadButton > button[kind="primary"] {
+        .stButton > button[kind^="primary"],
+        .stFormSubmitButton > button[kind^="primary"],
+        .stDownloadButton > button[kind^="primary"] {
             background-color: var(--color-monday-violet) !important;
             background: var(--color-monday-violet) !important;
             border-color: var(--color-monday-violet) !important;
@@ -419,9 +426,9 @@ def apply_app_theme() -> None:
             box-shadow: var(--shadow-button) !important;
         }
 
-        .stButton > button[kind="primary"]:hover,
-        .stFormSubmitButton > button[kind="primary"]:hover,
-        .stDownloadButton > button[kind="primary"]:hover {
+        .stButton > button[kind^="primary"]:hover,
+        .stFormSubmitButton > button[kind^="primary"]:hover,
+        .stDownloadButton > button[kind^="primary"]:hover {
             background-color: var(--color-monday-violet-hover) !important;
             background: var(--color-monday-violet-hover) !important;
             border-color: var(--color-monday-violet-hover) !important;
@@ -616,6 +623,7 @@ def apply_app_theme() -> None:
             display: flex;
             align-items: center;
             gap: 0.65rem;
+            font-family: var(--font-heading);
             color: var(--color-monday-violet) !important;
             font-size: 0.92rem;
             font-weight: 700;
@@ -630,12 +638,277 @@ def apply_app_theme() -> None:
             width: 2.25rem;
             height: 2.25rem;
             border-radius: 10px;
-            background: conic-gradient(from 270deg, #8181ff 15%, #33dbdb 40%, #33d58e 55%, #ffd633 65%, #fc527d 85%, #8181ff 100%);
+            background: linear-gradient(135deg, #405bd8, #238f91);
             color: white;
             font-size: 1.15rem;
             font-weight: 700;
-            box-shadow: 0 3px 12px rgba(129, 129, 255, 0.4);
+            box-shadow: 0 3px 12px rgba(64, 91, 216, 0.25);
             flex-shrink: 0;
+        }
+
+        .top-nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            min-height: 2.8rem;
+            color: var(--color-ink);
+        }
+
+        .top-nav-mark {
+            display: grid;
+            place-items: center;
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 11px;
+            background: linear-gradient(135deg, #405bd8, #238f91);
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(64, 91, 216, 0.22);
+        }
+
+        .top-nav-brand strong,
+        .top-nav-brand small {
+            display: block;
+        }
+
+        .top-nav-brand strong {
+            font-family: var(--font-heading);
+            font-size: 0.98rem;
+            line-height: 1.2;
+        }
+
+        .top-nav-brand small {
+            color: var(--color-slate);
+            font-size: 0.7rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        [data-testid="stLayoutWrapper"]:has(> .st-key-top_navigation) {
+            position: sticky;
+            top: 0.4rem;
+            z-index: 999;
+        }
+
+        .st-key-top_navigation {
+            width: 100%;
+            margin-bottom: 1.5rem;
+            padding: 0.35rem 0.8rem;
+            border: 1px solid var(--color-mist);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 8px 28px rgba(24, 43, 74, 0.07);
+            backdrop-filter: blur(14px);
+        }
+
+        .st-key-top_navigation [data-testid="stHorizontalBlock"] {
+            gap: 0.25rem !important;
+        }
+
+        .st-key-top_navigation [data-testid="stPageLink"] a,
+        .st-key-top_navigation a[data-testid="stPageLink-Anchor"] {
+            min-height: 2.45rem;
+            border-radius: 11px;
+            color: var(--color-slate) !important;
+            font-size: 0.82rem;
+            font-weight: 600;
+            justify-content: center;
+            padding: 0.4rem 0.35rem !important;
+            white-space: nowrap;
+            text-decoration: none !important;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .st-key-top_navigation [data-testid="stPageLink"] a:hover,
+        .st-key-top_navigation a[data-testid="stPageLink-Anchor"]:hover {
+            background: var(--color-periwinkle);
+            color: var(--color-monday-violet) !important;
+        }
+
+        .st-key-top_navigation [data-testid="stPageLink"] a[aria-current="page"],
+        .st-key-top_navigation a[data-testid="stPageLink-Anchor"][aria-current="page"] {
+            background: var(--color-periwinkle);
+            color: var(--color-monday-violet) !important;
+        }
+
+        .st-key-home_hero {
+            padding: clamp(1.5rem, 3.5vw, 3rem) 0;
+            margin-bottom: 2.5rem;
+        }
+
+        .home-product-preview {
+            position: relative;
+            padding: clamp(1.2rem, 3vw, 2rem);
+            border: 1px solid var(--color-mist);
+            border-radius: 24px;
+            background: linear-gradient(135deg, #edf2ff 0%, #f8faff 60%, #eef8fa 100%);
+            box-shadow: var(--shadow-card);
+        }
+
+        .home-preview-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1.2rem;
+            color: var(--color-slate);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
+
+        .home-preview-toolbar span:last-child {
+            padding: 0.35rem 0.65rem;
+            border: 1px solid var(--color-mist);
+            border-radius: 999px;
+            background: #ffffff;
+            letter-spacing: 0;
+        }
+
+        .home-resume-sheet {
+            max-width: 360px;
+            margin: 0 auto;
+            padding: 1.4rem 1.6rem;
+            border: 1px solid #e8edf5;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 12px 30px rgba(24, 43, 74, 0.1);
+        }
+
+        .home-resume-name {
+            color: var(--color-ink);
+            font-family: var(--font-heading);
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .home-resume-role {
+            margin-top: 0.2rem;
+            color: var(--color-slate);
+            font-size: 0.78rem;
+        }
+
+        .home-resume-rule {
+            height: 2px;
+            margin: 0.9rem 0;
+            background: var(--color-monday-violet);
+        }
+
+        .home-resume-section {
+            margin: 0.7rem 0 0.4rem;
+            color: var(--color-monday-violet);
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+        }
+
+        .home-resume-line {
+            width: 100%;
+            height: 6px;
+            margin: 0.35rem 0;
+            border-radius: 999px;
+            background: #e8edf5;
+        }
+
+        .home-resume-line--strong {
+            width: 74%;
+            background: #cad4e4;
+        }
+
+        .home-resume-line--short {
+            width: 52%;
+        }
+
+        .home-preview-tag {
+            position: absolute;
+            right: 1rem;
+            bottom: 1rem;
+            padding: 0.55rem 0.8rem;
+            border: 1px solid var(--color-mist);
+            border-radius: 12px;
+            background: #ffffff;
+            color: var(--color-ink);
+            font-size: 0.72rem;
+            font-weight: 600;
+            box-shadow: var(--shadow-card);
+        }
+
+        .st-key-home_features [data-testid="stImage"] img {
+            width: 100%;
+            height: 12rem;
+            border-radius: 14px;
+            object-fit: cover;
+        }
+
+        .st-key-home_feature_analysis,
+        .st-key-home_feature_jobs,
+        .st-key-home_feature_builder {
+            min-height: 23.7rem;
+        }
+
+        .home-hero-title {
+            color: var(--color-ink);
+            font-family: var(--font-heading);
+            font-size: clamp(2.4rem, 5vw, 4rem);
+            font-weight: 700;
+            letter-spacing: -0.045em;
+            line-height: 1.08;
+            margin: 0.35rem 0 0.8rem;
+        }
+
+        .home-hero-copy {
+            max-width: 36rem;
+            color: var(--color-slate);
+            font-size: 1.05rem;
+            line-height: 1.7;
+            margin-bottom: 1.3rem;
+        }
+
+        .st-key-home_analyze_cta [data-testid="stPageLink"] a,
+        .st-key-home_analyze_cta a[data-testid="stPageLink-Anchor"] {
+            min-height: 2.85rem;
+            border: 1.5px solid var(--color-monday-violet) !important;
+            border-radius: var(--radius-button);
+            background: var(--color-monday-violet);
+            color: #ffffff !important;
+            font-weight: 600;
+            justify-content: center;
+            padding: 0.65rem 0.9rem !important;
+            text-decoration: none !important;
+            box-shadow: var(--shadow-button);
+        }
+
+        .st-key-home_analyze_cta [data-testid="stPageLink"] a:hover,
+        .st-key-home_analyze_cta a[data-testid="stPageLink-Anchor"]:hover {
+            border-color: var(--color-monday-violet-hover) !important;
+            background: var(--color-monday-violet-hover);
+            color: #ffffff !important;
+            transform: translateY(-1px);
+        }
+
+        .st-key-home_analyze_cta [data-testid="stPageLink"] a *,
+        .st-key-home_analyze_cta a[data-testid="stPageLink-Anchor"] * {
+            color: #ffffff !important;
+        }
+
+        .st-key-home_build_cta [data-testid="stPageLink"] a,
+        .st-key-home_build_cta a[data-testid="stPageLink-Anchor"] {
+            min-height: 2.85rem;
+            border: 1.5px solid var(--color-mist) !important;
+            border-radius: var(--radius-button);
+            background: var(--color-snow);
+            color: var(--color-ink) !important;
+            font-weight: 600;
+            justify-content: center;
+            padding: 0.65rem 0.9rem !important;
+            text-decoration: none !important;
+        }
+
+        .st-key-home_build_cta [data-testid="stPageLink"] a:hover,
+        .st-key-home_build_cta a[data-testid="stPageLink-Anchor"]:hover {
+            border-color: var(--color-monday-violet) !important;
+            color: var(--color-monday-violet) !important;
         }
 
         .hero-kicker {
@@ -738,6 +1011,7 @@ def apply_app_theme() -> None:
         }
 
         .value-card-title {
+            font-family: var(--font-heading);
             font-size: 1rem;
             font-weight: 600;
             color: var(--color-ink);
@@ -857,38 +1131,6 @@ def apply_app_theme() -> None:
             border-top: 1px solid var(--color-mist);
         }
 
-        .app-footer-brand {
-            display: flex;
-            align-items: center;
-            gap: 0.55rem;
-            margin-bottom: 0.45rem;
-        }
-
-        .app-footer-mark {
-            display: grid;
-            place-items: center;
-            width: 1.75rem;
-            height: 1.75rem;
-            border-radius: 8px;
-            background: conic-gradient(from 270deg, #8181ff 15%, #33dbdb 40%, #33d58e 55%, #ffd633 65%, #fc527d 85%, #8181ff 100%);
-            color: white;
-            font-size: 0.85rem;
-            font-weight: 700;
-        }
-
-        .app-footer-name {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--color-ink);
-        }
-
-        .app-footer-tagline {
-            font-size: 0.84rem;
-            color: var(--color-slate);
-            font-style: italic;
-            margin-bottom: 0.85rem;
-        }
-
         .app-footer-meta {
             display: flex;
             flex-wrap: wrap;
@@ -907,6 +1149,61 @@ def apply_app_theme() -> None:
             [data-testid="stMainBlockContainer"] {
                 padding: 1.2rem 1rem 3rem;
             }
+
+            .st-key-top_navigation [data-testid="stHorizontalBlock"] {
+                flex-wrap: nowrap !important;
+                gap: 0.35rem !important;
+                overflow-x: auto !important;
+                scrollbar-width: none;
+            }
+
+            .st-key-top_navigation [data-testid="stColumn"]:has(.top-nav-brand) {
+                display: none !important;
+            }
+
+            .st-key-top_navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) {
+                flex: 0 0 64px !important;
+                width: 64px !important;
+            }
+
+            .st-key-top_navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) {
+                flex: 0 0 76px !important;
+                width: 76px !important;
+            }
+
+            .st-key-top_navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) {
+                flex: 0 0 110px !important;
+                width: 110px !important;
+            }
+
+            .st-key-top_navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(5) {
+                flex: 0 0 132px !important;
+                width: 132px !important;
+            }
+
+            .st-key-top_navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(6) {
+                flex: 0 0 160px !important;
+                width: 160px !important;
+            }
+
+            .st-key-top_navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(7) {
+                flex: 0 0 64px !important;
+                width: 64px !important;
+            }
+
+            .st-key-top_navigation [data-testid="stPageLink"] a {
+                width: 100% !important;
+                padding: 0.4rem 0.3rem !important;
+                font-size: 0.78rem !important;
+                white-space: nowrap !important;
+            }
+
+            .st-key-home_feature_analysis,
+            .st-key-home_feature_jobs,
+            .st-key-home_feature_builder {
+                min-height: 0;
+            }
+
             [data-testid="stHorizontalBlock"] {
                 flex-wrap: wrap !important;
                 gap: 0.6rem !important;
@@ -940,3 +1237,278 @@ def apply_app_theme() -> None:
         """,
         unsafe_allow_html=True,
     )
+    if dark_mode:
+        st.markdown(
+            """
+            <style>
+            :root {
+                color-scheme: dark;
+                --color-monday-violet: #a9b5ff;
+                --color-monday-violet-hover: #c5ceff;
+                --color-ink: #f3f6fb;
+                --color-slate: #c1ccda;
+                --color-iron: #9aabc0;
+                --color-fog: #34445a;
+                --color-mist: #36465c;
+                --color-pebble: #28374d;
+                --color-cloud: #101827;
+                --color-snow: #1b2738;
+                --color-shadow-dust: #243248;
+                --color-mint: #153b33;
+                --color-mint-soft: #112e29;
+                --color-mint-dark: #8dd9bc;
+                --color-sky: #173a50;
+                --color-sky-soft: #142d40;
+                --color-apricot: #50371f;
+                --color-apricot-soft: #34291b;
+                --color-lavender: #292b49;
+                --color-lavender-soft: #20233a;
+                --color-periwinkle: #24334b;
+                --color-periwinkle-wash: #344660;
+                --color-aqua: #173638;
+                --brand: #a9b5ff;
+                --brand-dark: #c5ceff;
+                --brand-soft: #202b45;
+                --ink: #f3f6fb;
+                --muted: #c1ccda;
+                --line: #36465c;
+                --surface: #1b2738;
+                --page: #101827;
+                --success: #8dd9bc;
+                --success-soft: #153b33;
+                --warning: #ffd08a;
+                --warning-soft: #34291b;
+                --error: #ffb4b4;
+                --error-soft: #3d252b;
+                --info: #9bd7f3;
+                --info-soft: #142d40;
+                --shadow-card: rgba(0, 0, 0, 0.18) 0px 4px 28px 0px;
+                --shadow-card-hover: rgba(0, 0, 0, 0.28) 0px 8px 36px 0px;
+                --shadow-button: 0 4px 14px rgba(81, 103, 210, 0.3);
+            }
+
+            body,
+            .stApp,
+            [data-testid="stAppViewContainer"],
+            [data-testid="stMain"],
+            [data-testid="stMainBlockContainer"] {
+                background-color: var(--color-cloud) !important;
+                color: var(--color-ink) !important;
+            }
+
+            h1, h2, h3, h4, h5, h6, p, li, label,
+            [data-testid="stMarkdownContainer"],
+            [data-testid="stCaptionContainer"],
+            [data-testid="stWidgetLabel"],
+            [data-testid="stMetricLabel"] p,
+            [data-testid="stMetricValue"] div {
+                color: var(--color-ink) !important;
+            }
+
+            [data-testid="stCaptionContainer"] p,
+            .top-nav-brand small,
+            .hero-copy,
+            .value-card-desc,
+            .app-footer-meta {
+                color: var(--color-slate) !important;
+            }
+
+            section[data-testid="stSidebar"],
+            section[data-testid="stSidebar"] > div,
+            [data-testid="stSidebarContent"],
+            [data-testid="stSidebarUserContent"],
+            .st-key-top_navigation {
+                background: var(--color-snow) !important;
+                border-color: var(--color-mist) !important;
+            }
+
+            [data-testid="stSidebarNavLink"][aria-current="page"],
+            [data-testid="stSidebarNav"] a[aria-current="page"],
+            [data-testid="stSidebarNavLink"].active,
+            [data-testid="stSidebarNav"] a.active {
+                background: #405bd8 !important;
+                color: #ffffff !important;
+            }
+
+            [data-testid="stSidebarNavLink"][aria-current="page"] *,
+            [data-testid="stSidebarNav"] a[aria-current="page"] * {
+                color: #ffffff !important;
+                fill: #ffffff !important;
+            }
+
+            .sidebar-user-card {
+                background: var(--color-snow) !important;
+                border-color: var(--color-mist) !important;
+            }
+
+            .sidebar-status-pill {
+                background: var(--success-soft) !important;
+                border-color: var(--color-mist) !important;
+                color: var(--success) !important;
+            }
+
+            [data-testid="stVerticalBlockBorderWrapper"],
+            [data-testid="stMetric"],
+            [data-testid="stExpander"],
+            .step-track,
+            .value-card,
+            .check-suggestion,
+            .quality-disclaimer,
+            .stTabs [data-baseweb="tab-list"],
+            [data-testid="stFileUploader"] section,
+            div[role="radiogroup"] label {
+                background: var(--color-snow) !important;
+                border-color: var(--color-mist) !important;
+                color: var(--color-ink) !important;
+            }
+
+            [data-testid="stMarkdownContainer"] code {
+                background: var(--color-pebble) !important;
+                color: var(--color-ink) !important;
+            }
+
+            .stTabs [data-baseweb="tab"][aria-selected="true"],
+            .stTabs [aria-selected="true"] {
+                background: var(--color-periwinkle) !important;
+                color: var(--color-monday-violet) !important;
+            }
+
+            .stTabs [data-baseweb="tab-list"] {
+                background: var(--color-pebble) !important;
+            }
+
+            .home-product-preview {
+                background: linear-gradient(135deg, #1b2738 0%, #202c43 70%, #1b3444 100%) !important;
+                border-color: var(--color-mist) !important;
+            }
+
+            .sidebar-guest-card,
+            .step-track,
+            .value-card,
+            .check-suggestion {
+                background: var(--color-snow) !important;
+                border-color: var(--color-mist) !important;
+            }
+
+            .step-item.active .step-number {
+                background: #405bd8 !important;
+                color: #ffffff !important;
+            }
+
+            .skill-chip-match,
+            .match-chip-strong {
+                background: var(--success-soft) !important;
+                border-color: var(--color-mint-dark) !important;
+                color: var(--success) !important;
+            }
+
+            .skill-chip-gap {
+                background: var(--color-pebble) !important;
+                border-color: var(--color-mist) !important;
+                color: var(--color-slate) !important;
+            }
+
+            .match-chip-moderate {
+                background: var(--info-soft) !important;
+                border-color: var(--info) !important;
+                color: var(--info) !important;
+            }
+
+            .quality-disclaimer {
+                background: var(--info-soft) !important;
+                border-color: var(--color-mist) !important;
+                color: var(--info) !important;
+            }
+
+            [data-testid="stTextArea"] textarea,
+            [data-testid="stTextInput"] input,
+            [data-testid="stSelectbox"] div[data-baseweb="select"],
+            [data-testid="stNumberInput"] input,
+            [data-testid="stDateInput"] input {
+                background: var(--color-snow) !important;
+                border-color: var(--color-mist) !important;
+                color: var(--color-ink) !important;
+            }
+
+            [data-testid="stTextInputRootElement"],
+            [data-testid="stTextAreaRootElement"] {
+                background: var(--color-snow) !important;
+                border-color: var(--color-mist) !important;
+            }
+
+            [data-testid="stTextInput"] input::placeholder,
+            [data-testid="stTextArea"] textarea::placeholder {
+                color: var(--color-iron) !important;
+                opacity: 1 !important;
+            }
+
+            [data-testid="stTextInput"] button {
+                background: var(--color-snow) !important;
+                border-color: var(--color-mist) !important;
+                color: var(--color-slate) !important;
+            }
+
+            [data-testid="stProgress"] > div > div {
+                background: var(--color-pebble) !important;
+            }
+
+            .stButton > button:disabled,
+            .stFormSubmitButton > button:disabled,
+            button[data-testid^="stBaseButton-"]:disabled {
+                background: var(--color-pebble) !important;
+                border-color: var(--color-mist) !important;
+                color: var(--color-slate) !important;
+            }
+
+            .stButton > button[kind^="primary"],
+            .stFormSubmitButton > button[kind^="primary"],
+            .stDownloadButton > button[kind^="primary"],
+            button[data-testid^="stBaseButton-primary"] {
+                background: #405bd8 !important;
+                border-color: #405bd8 !important;
+                color: #ffffff !important;
+            }
+
+            .stButton > button[kind^="primary"]:hover,
+            .stFormSubmitButton > button[kind^="primary"]:hover,
+            .stDownloadButton > button[kind^="primary"]:hover,
+            button[data-testid^="stBaseButton-primary"]:hover {
+                background: #3048b8 !important;
+                border-color: #3048b8 !important;
+                color: #ffffff !important;
+            }
+
+            .stButton > button:not([kind^="primary"]),
+            .stFormSubmitButton > button:not([kind^="primary"]),
+            .stDownloadButton > button,
+            .stLinkButton > a,
+            button[data-testid^="stBaseButton-"]:not([data-testid^="stBaseButton-primary"]) {
+                background: var(--color-snow) !important;
+                border-color: var(--color-mist) !important;
+                color: var(--color-ink) !important;
+            }
+
+            .stButton > button[kind="secondary"]:hover,
+            .stFormSubmitButton > button[kind="secondary"]:hover,
+            .stDownloadButton > button:hover,
+            .stLinkButton > a:hover,
+            button[data-testid^="stBaseButton-"]:not([data-testid^="stBaseButton-primary"]):hover {
+                background: var(--color-periwinkle) !important;
+                color: var(--color-monday-violet) !important;
+            }
+
+            [data-baseweb="popover"],
+            [data-baseweb="menu"],
+            [role="listbox"],
+            [role="option"] {
+                background-color: var(--color-snow) !important;
+                color: var(--color-ink) !important;
+            }
+
+            .app-footer {
+                border-color: var(--color-mist) !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )

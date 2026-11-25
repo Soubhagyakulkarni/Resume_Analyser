@@ -88,15 +88,15 @@ def render_next_actions(
 
 def _render_action_card(action: NextAction) -> None:
     badge_style = (
-        "background: var(--color-apricot-soft); color: #c2410c; border: 1px solid #fed7aa;"
+        "background: var(--warning-soft); color: var(--warning); border: 1px solid var(--color-mist);"
         if action.priority == "High"
-        else "background: var(--color-sky-soft); color: #0369a1; border: 1px solid #bae6fd;"
+        else "background: var(--info-soft); color: var(--info); border: 1px solid var(--color-mist);"
         if action.priority == "Medium"
-        else "background: var(--color-mint-soft); color: #15803d; border: 1px solid #bbf7d0;"
+        else "background: var(--success-soft); color: var(--success); border: 1px solid var(--color-mist);"
     )
     st.markdown(
         f"""
-        <div style="background: #ffffff; border: 1px solid var(--color-mist); border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 0.85rem; box-shadow: 0 2px 12px rgba(0,0,0,0.03);">
+        <div style="background: var(--color-snow); border: 1px solid var(--color-mist); border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 0.85rem; box-shadow: 0 2px 12px rgba(0,0,0,0.03);">
           <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
             <span style="font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.04em; {badge_style}">
               {action.priority} priority

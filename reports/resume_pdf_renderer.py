@@ -1,4 +1,4 @@
-"""Render user-authored resume content as a clean, professional PDF."""
+"""Render user-authored resume content as a single-column, text-based PDF."""
 
 import re
 from io import BytesIO
@@ -6,7 +6,7 @@ from typing import ClassVar
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -15,8 +15,6 @@ from reportlab.platypus import (
     Paragraph,
     SimpleDocTemplate,
     Spacer,
-    Table,
-    TableStyle,
 )
 
 # Matches URLs and domain links
@@ -52,7 +50,7 @@ _KNOWN_SKILL_CATS = (
     "soft skills",
 )
 
-# Date pattern for right-aligned entry headers (e.g. 2024 - 2028, 2026, Present)
+# Date pattern for entry lines ending with years (e.g. 2024 - 2028, 2026, Present)
 _DATE_SUFFIX_RE = re.compile(
     r"^(.*?)\s*(\b(?:19|20)\d{2}\s*[\-–—to\s]+\s*(?:(?:19|20)\d{2}|Present|Current|Ongoing)|\b(?:19|20)\d{2})\s*$",
     re.IGNORECASE,
@@ -98,7 +96,7 @@ def _format_skill_line(line: str) -> str:
 
 
 class ResumePdfRenderer:
-    """Create a printable, professional resume PDF."""
+    """Create a printable, single-column resume PDF."""
 
     _TEMPLATES: ClassVar[dict[str, tuple[str, int, float]]] = {
         # accent_color, name_font_size, margin_inches
@@ -139,9 +137,6 @@ class ResumePdfRenderer:
         muted_color = colors.HexColor("#4B5563")
         line_color = colors.HexColor("#374151")
 
-        avail_width = (8.5 - 2 * margin) * inch
-
-        # Typography matching industry standard resumes (Jake's Resume / Overleaf LaTeX style)
         name_style = ParagraphStyle(
             "ResumeName",
             parent=styles["Title"],
@@ -149,7 +144,7 @@ class ResumePdfRenderer:
             fontSize=name_size,
             leading=name_size + 4,
             textColor=text_color,
-            alignment=TA_CENTER,
+            alignment=TA_LEFT,
             spaceAfter=2,
             spaceBefore=0,
         )
@@ -160,7 +155,7 @@ class ResumePdfRenderer:
             fontSize=8.5 if compact else 9,
             leading=12,
             textColor=muted_color,
-            alignment=TA_CENTER,
+            alignment=TA_LEFT,
             spaceAfter=2,
         )
         subtitle_style = ParagraphStyle(
@@ -170,7 +165,7 @@ class ResumePdfRenderer:
             fontSize=10,
             leading=13,
             textColor=accent_color,
-            alignment=TA_CENTER,
+            alignment=TA_LEFT,
             spaceAfter=2,
         )
         section_heading_style = ParagraphStyle(
@@ -191,7 +186,7 @@ class ResumePdfRenderer:
             fontSize=body_size,
             leading=body_leading,
             textColor=text_color,
-            alignment=TA_JUSTIFY,
+            alignment=TA_LEFT,
             spaceAfter=1.5,
         )
         bullet_style = ParagraphStyle(
@@ -203,25 +198,6 @@ class ResumePdfRenderer:
             spaceAfter=1,
             alignment=TA_LEFT,
         )
-        entry_left_style = ParagraphStyle(
-            "ResumeEntryLeft",
-            parent=styles["Normal"],
-            fontName="Helvetica-Bold",
-            fontSize=body_size,
-            leading=body_leading,
-            textColor=text_color,
-            alignment=TA_LEFT,
-        )
-        entry_right_style = ParagraphStyle(
-            "ResumeEntryRight",
-            parent=styles["Normal"],
-            fontName="Helvetica-Oblique",
-            fontSize=body_size,
-            leading=body_leading,
-            textColor=muted_color,
-            alignment=TA_RIGHT,
-        )
-
         story: list = []
 
         # Header: Name
@@ -283,32 +259,16 @@ class ResumePdfRenderer:
                 # Bullet items
                 if stripped.startswith(("•", "-", "–", "▪", "■", "*", "·", "◦", "\ufffd")):
                     bullet_body = stripped.lstrip("•-–▪■*·◦\ufffd ")
-                    story.append(Paragraph(_linkify(bullet_body), bullet_style, bulletText="•"))
+                    story.append(Paragraph(_linkify(bullet_body), bullet_style, bulletText="-"))
                     continue
 
-                # Pipe-delimited entry headers (e.g. "Role | Org | Dates" or "Title | Dates")
+                # Keep entry details on one line so PDF text extraction preserves reading order.
                 if "|" in stripped:
                     parts = [p.strip() for p in stripped.split("|") if p.strip()]
                     if len(parts) >= 2:
-                        left_content = f"<b>{_linkify(parts[0])}</b>"
-                        if len(parts) >= 3:
-                            left_content += f"  |  <i>{_linkify(parts[1])}</i>"
-                        right_content = f"<i>{_linkify(parts[-1])}</i>"
-                        entry_table = Table(
-                            [[
-                                Paragraph(left_content, entry_left_style),
-                                Paragraph(right_content, entry_right_style),
-                            ]],
-                            colWidths=[avail_width * 0.72, avail_width * 0.28],
-                        )
-                        entry_table.setStyle(TableStyle([
-                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                            ("TOPPADDING", (0, 0), (-1, -1), 1),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
-                        ]))
-                        story.append(entry_table)
+                        entry_line = f"<b>{_linkify(parts[0])}</b> | "
+                        entry_line += " | ".join(_linkify(part) for part in parts[1:])
+                        story.append(Paragraph(entry_line, body_style))
                         continue
 
                 # Check for entry title with dates at the end (e.g. "Degree Name 2024 - 2028")
@@ -316,21 +276,12 @@ class ResumePdfRenderer:
                 if date_match and len(date_match.group(1).strip()) > 3:
                     left_text = date_match.group(1).strip()
                     right_text = date_match.group(2).strip()
-                    entry_table = Table(
-                        [[
-                            Paragraph(f"<b>{_linkify(left_text)}</b>", entry_left_style),
-                            Paragraph(f"<i>{_linkify(right_text)}</i>", entry_right_style),
-                        ]],
-                        colWidths=[avail_width * 0.72, avail_width * 0.28],
+                    story.append(
+                        Paragraph(
+                            f"<b>{_linkify(left_text)}</b> | {_linkify(right_text)}",
+                            body_style,
+                        )
                     )
-                    entry_table.setStyle(TableStyle([
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                        ("TOPPADDING", (0, 0), (-1, -1), 1),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
-                    ]))
-                    story.append(entry_table)
                     continue
 
                 # Regular body line

@@ -1,21 +1,23 @@
-"""Refresh the SQLite job catalog from an authorized Adzuna API account."""
+"""Refresh the Supabase PostgreSQL catalog from an authorized Adzuna API account."""
 
 import argparse
 import logging
 import sys
 
+from supabase import create_client
+
 from app.config.settings import Settings
 from app.utils.errors import ApplicationError
 from config.logging_config import configure_logging
 from integrations.adzuna_job_client import AdzunaJobClient
-from repositories.sqlite_job_repository import SQLiteJobRepository
+from repositories.supabase_job_repository import SupabaseJobRepository
 
 logger = logging.getLogger(__name__)
 
 
 def refresh_catalog(
     client: AdzunaJobClient,
-    repository: SQLiteJobRepository,
+    repository: SupabaseJobRepository,
     what: str,
     where: str,
     pages: int,
@@ -40,6 +42,10 @@ def main() -> int:
     configure_logging()
     try:
         settings = Settings.from_environment()
+        if not settings.supabase_url or not settings.supabase_service_role_key:
+            raise ValueError(
+                "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the local .env file."
+            )
         client = AdzunaJobClient(
             settings.adzuna_app_id,
             settings.adzuna_app_key,
@@ -47,7 +53,9 @@ def main() -> int:
         )
         count = refresh_catalog(
             client,
-            SQLiteJobRepository(settings.sqlite_database_path),
+            SupabaseJobRepository(
+                create_client(settings.supabase_url, settings.supabase_service_role_key)
+            ),
             what=args.what,
             where=args.where,
             pages=args.pages,

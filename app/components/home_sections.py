@@ -12,17 +12,13 @@ from services.career_profile import SAMPLE_RESUME_TEXT
 
 
 def render_hero(has_results: bool) -> None:
-    """Render the branded hero block with step progress indicator."""
+    """Render the concise hero block and step progress indicator."""
     st.markdown(
         """
-        <div class="app-brand">
-          <span class="app-brand-mark">R</span> Career clarity, one resume at a time
-        </div>
-        <div class="hero-kicker">Your next career move starts here</div>
-        <h1>Understand your resume.<br><span class="hero-gradient-text">Discover fitting roles.</span><br>Plan your next skill.</h1>
+        <div class="hero-kicker">Resume analysis</div>
+        <h1>Plan your next career move.</h1>
         <p class="hero-copy">
-          Get AI-powered resume insights, discover relevant job roles, and build a practical
-          skill-development plan — all grounded in what your resume actually says.
+          Review your resume, explore relevant roles, and identify skills to build.
         </p>
         """,
         unsafe_allow_html=True,
@@ -54,20 +50,20 @@ def _render_step_progress(has_results: bool) -> None:
 
 _VALUE_CARDS = [
     (
-        "Resume Insights",
-        "Understand what your resume demonstrates — and what it misses.",
+        "Resume review",
+        "Strengths, gaps, and actionable feedback.",
     ),
     (
-        "Relevant Job Roles",
-        "Discover current listings that align with your skills.",
+        "Job matches",
+        "Current roles based on your experience.",
     ),
     (
-        "Priority Skills",
-        "Know which skills to learn next and why.",
+        "Skills plan",
+        "Prioritized skills to strengthen your profile.",
     ),
     (
         "PDF Report",
-        "Download a clear, shareable career-guidance report.",
+        "Download a summary of your results.",
     ),
 ]
 
@@ -99,21 +95,12 @@ def render_how_it_works() -> None:
     with st.expander("How this works", expanded=False):
         st.markdown(
             """
-1. **Upload or paste your resume.** PDF or DOCX files are extracted locally.
-   Plain text pasting is also supported.
-2. **Give consent.** Your resume text is sent to the configured AI provider
-   *only* after you tick the consent checkbox.  No data is sent before that.
-3. **Receive your analysis.** The app extracts skills, compares them against
-   current job listings, and builds a skill-development plan.
-4. **Explore and download.** Browse matched roles, review skill gaps, and
-   download a PDF career-guidance report.
+1. Upload or paste your resume.
+2. Review and consent before sending it for AI analysis.
+3. Explore resume feedback, job matches, and a skills plan.
 
-**Limitations to keep in mind:**
-- AI analysis depends on resume text quality and provider availability.
-- Job matches depend on catalog coverage and the 30-day freshness window.
-- The app does not verify external profiles, repositories, or real abilities.
-- No match does not mean the resume is poor or the user is unsuitable.
-- This is career *guidance*, not an ATS score or hiring decision.
+**Keep in mind:** Matches depend on available listings and resume evidence.
+Review AI suggestions for accuracy. Results are career guidance, not hiring decisions.
             """
         )
 
@@ -130,13 +117,10 @@ def maybe_load_sample_resume() -> str | None:
         clicked = st.button(
             "Try a sample resume",
             key="load_sample_resume",
-            help="Load a synthetic demo resume.  No real personal data.",
+            help="Load a sample with synthetic data.",
         )
     with col_note:
-        st.caption(
-            "**Demo only** — this is a synthetic resume for demonstration."
-            "  No real person's data is used."
-        )
+        st.caption("Sample data only; no real personal information.")
     if clicked:
         return SAMPLE_RESUME_TEXT
     return None

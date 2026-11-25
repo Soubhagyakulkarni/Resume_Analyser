@@ -197,3 +197,92 @@ def test_gemini_gateway_maps_rate_limit_to_quota_message(monkeypatch):
     with pytest.raises(ProviderRateLimitError) as error:
         GeminiAnalysisGateway(Settings.from_environment()).analyze("Synthetic resume text")
     assert "free-tier quota" in error.value.user_message
+
+
+def test_gemini_gateway_extracts_text_from_pdf(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace(text="Scanned John Doe Software Engineer Resume")
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(gemini_gateway.genai, "Client", FakeClient)
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-test-key")
+
+    gateway = GeminiAnalysisGateway(Settings.from_environment())
+    extracted = gateway.extract_text_from_pdf(b"%PDF-1.4 scanned content")
+
+    assert extracted == "Scanned John Doe Software Engineer Resume"
+    assert captured["model"] == Settings.from_environment().gemini_model
+    contents = captured["contents"]
+    assert len(contents) == 2
+    assert contents[0].inline_data.mime_type == "application/pdf"
+    assert contents[0].inline_data.data == b"%PDF-1.4 scanned content"
+
+
+def test_gemini_gateway_extract_text_returns_empty_on_error(monkeypatch):
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            raise RuntimeError("API connection failure")
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(gemini_gateway.genai, "Client", FakeClient)
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-test-key")
+
+    gateway = GeminiAnalysisGateway(Settings.from_environment())
+    extracted = gateway.extract_text_from_pdf(b"%PDF-1.4 failed content")
+    assert extracted == ""
+
+
+def test_gemini_gateway_embeds_text(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class FakeModels:
+        def embed_content(self, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace(
+                embeddings=[SimpleNamespace(values=[0.1, 0.2, 0.3, 0.4])]
+            )
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(gemini_gateway.genai, "Client", FakeClient)
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-test-key")
+
+    gateway = GeminiAnalysisGateway(Settings.from_environment())
+    vector = gateway.embed_text("Distributed Systems and Cloud Infrastructure")
+
+    assert vector == [0.1, 0.2, 0.3, 0.4]
+    assert captured["model"] == "gemini-embedding-001"
+    assert captured["contents"] == "Distributed Systems and Cloud Infrastructure"
+
+
+def test_gemini_gateway_embed_text_handles_error(monkeypatch):
+    class FakeModels:
+        def embed_content(self, **kwargs):
+            raise RuntimeError("API failure")
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.models = FakeModels()
+
+    monkeypatch.setattr(gemini_gateway.genai, "Client", FakeClient)
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-test-key")
+
+    gateway = GeminiAnalysisGateway(Settings.from_environment())
+    vector = gateway.embed_text("Some text")
+    assert vector == []

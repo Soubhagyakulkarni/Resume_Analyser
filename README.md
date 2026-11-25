@@ -7,9 +7,9 @@
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
-[![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Soubhagyakulkarni/Resume_Analyser)
-[![Tests](https://img.shields.io/badge/Tests-177%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)]()
+[![Tests](https://img.shields.io/badge/Tests-pytest-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
 ### [Live App](https://resumeanalyser-mrxhennyfuc9femfqvernz.streamlit.app/)
@@ -21,7 +21,7 @@
 ## What Is This?
 
 Streamlit application for evidence-grounded resume analysis, skill identification,
-job recommendations from an authorized SQLite catalog, and downloadable PDF reports.
+job recommendations from a Supabase PostgreSQL catalog, and downloadable PDF reports.
 The system provides career-development support; it does not make hiring decisions.
 
 ---
@@ -62,7 +62,31 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Step 4 — Set up your environment secrets
+### Step 4 — Create and configure Supabase
+
+Create a project at [supabase.com](https://supabase.com/dashboard). Open **SQL Editor**
+and run the complete script in
+[`repositories/migrations/003_supabase_job_catalog.sql`](./repositories/migrations/003_supabase_job_catalog.sql).
+This creates the jobs catalog and a restricted catalog refresh function. The app uses
+Supabase Auth user metadata for display name and username; no password or extra profile
+table is stored by the app. New users must confirm their email using the link Supabase
+or a 6-digit code before they can sign in with their email and password. Phone numbers
+and SMS are not required. To use the in-app code form, enable email confirmations and
+update **Authentication → Email Templates → Confirm signup** to include `{{ .Token }}`
+in the message body. Supabase's default confirmation link template will not provide a
+code for that form. For password recovery by code, update **Authentication → Email
+Templates → Reset Password** to include `{{ .Token }}` as well. Set the Supabase Auth
+**Site URL** to your app URL and allow that URL in its redirect settings.
+
+The Supabase integration is being prepared locally and is not deployed to the linked live
+app yet. The app will not start with the new code until the project migration and secrets
+below are in place.
+
+Copy the project URL, anon/publishable key, and service-role/secret key from **Project
+Settings → API**. The service-role key bypasses row-level security: keep it only in the
+server environment and never expose it in browser code or commit it.
+
+### Step 5 — Set up your environment secrets
 
 ```powershell
 # Windows
@@ -80,6 +104,9 @@ Open `.env` and fill in your keys:
 AI_PROVIDER=gemini
 GEMINI_API_KEY=your_actual_gemini_api_key_here
 GEMINI_MODEL=gemini-2.0-flash
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 ADZUNA_APP_ID=your_adzuna_app_id
 ADZUNA_APP_KEY=your_adzuna_app_key
@@ -90,12 +117,23 @@ Get a free Gemini API key at [aistudio.google.com](https://aistudio.google.com/a
 Get free Adzuna credentials at [developer.adzuna.com](https://developer.adzuna.com/signup).  
 Never commit your `.env` file — it is already in `.gitignore`.
 
+If you have the old local job catalog, migrate its active listings once after
+the Supabase SQL migration and `.env` setup, but before the first app startup:
+
+```powershell
+python scripts\migrate_sqlite_jobs_to_supabase.py
+```
+
+The importer reads `data/jobs.sqlite3` in read-only mode, refuses an empty catalog,
+and replaces the Supabase job catalog atomically. It does not import user accounts.
+After this one-time import, the app uses PostgreSQL only.
+
 For Gemini, set `AI_PROVIDER=gemini` and `GEMINI_API_KEY` in the ignored `.env` file.
 For OpenAI, set `AI_PROVIDER=openai` and `OPENAI_API_KEY`. The selected provider and
 key must match; a Gemini key cannot authenticate to OpenAI and vice versa. Never put
 a real key in `.env.example`, commit `.env`, or place secrets in `.streamlit/config.toml`.
 
-### Step 5 — Run the app
+### Step 6 — Run the app
 
 ```powershell
 # Windows
@@ -128,13 +166,19 @@ expired, revoked, or invalid for the configured provider account.
 AI_PROVIDER = "gemini"
 GEMINI_API_KEY = "your_actual_key_here"
 GEMINI_MODEL = "gemini-2.0-flash"
+SUPABASE_URL = "https://your-project-ref.supabase.co"
+SUPABASE_ANON_KEY = "your_supabase_anon_key"
+SUPABASE_SERVICE_ROLE_KEY = "your_supabase_service_role_key"
 
 ADZUNA_APP_ID = "your_app_id"
 ADZUNA_APP_KEY = "your_app_key"
 ADZUNA_COUNTRY_CODE = "in"
 ```
 
-6. Click **Save** — the app reboots automatically.
+6. Click **Save** — the app reboots automatically. Run the Supabase SQL migration
+   above and set the Supabase Auth Site URL/redirect allowlist to the deployed app URL.
+   Ensure email confirmations are enabled and the deployed app URL is allowed in the
+   Supabase Auth redirect settings.
 
 Future updates: just `git push origin main` and Streamlit Cloud redeploys automatically.
 
@@ -156,7 +200,9 @@ is sent to the configured provider. Consent is requested again for each new anal
 
 Career stage, primary goal, preferred role, and preferred location are optional.
 They are held in the active Streamlit session only, can be skipped, and are not
-stored in SQLite. Role/location preferences also filter recommendations.
+stored in the database. Role/location preferences also filter recommendations.
+The horizontal top navigation offers a light/dark appearance toggle held only in
+the current browser session; it does not change account or database data.
 
 The **Resume builder** workspace lets users create a resume from guided fields or
 edit text extracted locally from an existing PDF/DOCX (pasted text is also
@@ -166,7 +212,7 @@ Classic, Modern, and Compact PDF layouts with a live preview. The checklist is
 not an ATS score. Use the **Review & export** step to see the finished resume
 and select **Download PDF**. The generated order is Profile, Experience,
 Projects, Education, Skills, then Certifications or activities. This workspace
-does not call an AI provider or save resume content to SQLite; users should
+does not call an AI provider or save resume content to PostgreSQL; users should
 include only accurate information.
 
 ---
@@ -211,12 +257,8 @@ limited set of skills. A skill not found in the resume is not proof that the use
 pytest
 ```
 
-Tests use synthetic content, temporary SQLite databases, and fake AI dependencies;
+Tests use synthetic content, temporary test databases, and fake AI dependencies;
 they make no paid API calls.
-
-```
-177 passed in 8.56s
-```
 
 ---
 

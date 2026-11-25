@@ -4,12 +4,12 @@
 
 | Field | Value |
 |---|---|
-| Status | **Live – v1.1** |
-| Version | 1.1 |
-| Last updated | 2026-10-21 |
+| Status | **v1.1 live; Supabase migration in progress** |
+| Version | 1.2 |
+| Last updated | 2026-11-16 |
 | Related document | [SOFTWARE_ARCH.md](./SOFTWARE_ARCH.md) |
 | AI provider | Google Gemini (`gemini-flash-latest`) |
-| Runtime | Streamlit · Python 3.12 · SQLite |
+| Runtime | Streamlit · Python 3.12 · Supabase Auth · PostgreSQL |
 
 ---
 
@@ -81,7 +81,7 @@ Most resume feedback is either too generic (online templates) or too expensive (
 
 | ID | Requirement | Status |
 |---|---|---|
-| F3.1 | Match resume skills against SQLite job catalog using deterministic scoring | Done |
+| F3.1 | Match resume skills against PostgreSQL job catalog using deterministic scoring | Done |
 | F3.2 | Show match %, missing skills, and job source metadata per listing | Done |
 | F3.3 | Fetch live job listings from Adzuna API when catalog is stale | Done |
 | F3.4 | A job must exist in the catalog to be recommended (no hallucinated listings) | Done |
@@ -91,7 +91,7 @@ Most resume feedback is either too generic (online templates) or too expensive (
 | ID | Requirement | Status |
 |---|---|---|
 | F4.1 | User pastes any job description; system extracts keywords deterministically | Done |
-| F4.2 | Produce a match score (0-100) based on keyword overlap | Done |
+| F4.2 | Produce a hybrid match score (0-100) combining dense AI vector embeddings with keyword overlap | Done |
 | F4.3 | Show matched keywords (green) and missing keywords (red) as chips | Done |
 | F4.4 | Before/after rewrite suggestions based on structural rules only — no metrics invented | Done |
 | F4.5 | Skills bar chart (Plotly) showing evidenced vs inferred skills | Done |
@@ -116,6 +116,15 @@ Most resume feedback is either too generic (online templates) or too expensive (
 | F7.1 | Generate a PDF report from validated analysis data | Done |
 | F7.2 | Report is generated in-memory; not stored server-side | Done |
 
+### 5.8 Accounts — IN PROGRESS
+
+| ID | Requirement | Status |
+|---|---|---|
+| F8.1 | Keep resume analysis available to guests; account creation is optional | Done |
+| F8.2 | Use Supabase Auth for email/password registration and sign-in, with email confirmation for new accounts | Implemented locally; requires project setup |
+| F8.3 | Keep only username and display name as profile metadata; never store passwords in the app | Implemented locally; requires project setup |
+| F8.4 | Store the job catalog in Supabase PostgreSQL; do not use SQLite at runtime | Implemented locally; requires project migration |
+
 ---
 
 ## 6. Non-Functional Requirements
@@ -127,7 +136,7 @@ Most resume feedback is either too generic (online templates) or too expensive (
 | NF3 | Resume text length limit | 15,000 chars |
 | NF4 | JD text length limit | 15,000 chars |
 | NF5 | No resume text stored server-side by default | Enforced in session state |
-| NF6 | All tests pass offline with no real API keys | 175 / 175 |
+| NF6 | All tests pass offline with no real API keys | Verified by current pytest run |
 | NF7 | Privacy: no PII in logs | Enforced in logging config |
 | NF8 | Accessibility: keyboard-usable core UI | Streamlit defaults |
 
@@ -147,11 +156,10 @@ Most resume feedback is either too generic (online templates) or too expensive (
 
 ## 8. Out of Scope (MVP)
 
-- User accounts / login
 - Saving analysis history across sessions
 - Counselor multi-student dashboard
 - Automated job application
-- Scanned/image-only PDF OCR (returns a clear error message)
+- Scanned/image-only PDF OCR — supported via Gemini multimodal fallback when AI provider is Gemini
 - Mobile-native app
 
 ---
@@ -163,8 +171,8 @@ Most resume feedback is either too generic (online templates) or too expensive (
 | Gemini API network drops (wsarecv) | Retry logic + timeout config; falls back to user-retryable error |
 | Model alias changes (gemini-flash-latest is a moving pointer) | Pin to a versioned alias when Google stabilises naming |
 | Keyword extractor misses domain-specific multi-word phrases | JD matcher uses phrase patterns + CamelCase detection; acceptable for MVP |
-| SQLite write contention on multi-user deploy | Documented; upgrade to PostgreSQL before scaling |
-| PDF with no extractable text (scanned image) | Detected via empty text after parsing; user shown clear message |
+| PostgreSQL availability or policy misconfiguration | Use Supabase-managed backups, row-level security, and an isolated service-role key |
+| PDF with no extractable text (scanned image) | Handled via Gemini multimodal OCR fallback; falls back to clear error message if OCR fails |
 
 ---
 

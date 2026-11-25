@@ -1,36 +1,11 @@
-"""Unit tests for password hashing and validation functions."""
+"""Unit tests for registration input validation."""
 
-from services.auth_service import (
-    hash_password,
+from services.auth_validation import (
     validate_email,
     validate_full_name,
     validate_password,
     validate_username,
-    verify_password,
 )
-
-
-def test_password_hash_and_verify():
-    raw_password = "SecretPassword123!"
-    pwd_hash, salt = hash_password(raw_password)
-
-    assert pwd_hash
-    assert salt
-    assert len(salt) == 32  # 16 bytes hex
-
-    assert verify_password(raw_password, pwd_hash, salt) is True
-    assert verify_password("WrongPassword!", pwd_hash, salt) is False
-
-
-def test_unique_salts_generate_distinct_hashes():
-    password = "SamePassword"
-    hash1, salt1 = hash_password(password)
-    hash2, salt2 = hash_password(password)
-
-    assert salt1 != salt2
-    assert hash1 != hash2
-    assert verify_password(password, hash1, salt1) is True
-    assert verify_password(password, hash2, salt2) is True
 
 
 def test_validate_username():

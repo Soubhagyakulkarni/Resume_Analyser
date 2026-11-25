@@ -7,18 +7,19 @@ def test_preferences_filter_jobs_without_rerunning_resume_analysis():
     source = """
 from datetime import UTC, datetime
 import streamlit as st
-from app.pages.results import render_results_page
+from app.pages.job_recommendations import render_job_recommendations_page
 from app.session_state import (
     ANALYSIS_KEY,
     BROWSE_JOBS_KEY,
-    JOB_CATALOG_STATUS_KEY,
     RECOMMENDATIONS_KEY,
     RESUME_TEXT_KEY,
 )
 from models.analysis import ResumeAnalysis, Skill
 from models.job import Job
 from services.recommendation_service import RecommendationService
+import services.catalog_seeder
 
+services.catalog_seeder.ensure_job_catalog = lambda *args, **kwargs: None
 posted = datetime.now(UTC).date()
 jobs = [
     Job("software-bengaluru", "Graduate Software Engineer", "", ("Python", "SQL"), "Bengaluru, India", "https://careers.example.com/software", "Fixture", posted),
@@ -39,15 +40,9 @@ st.session_state[RECOMMENDATIONS_KEY] = []
 st.session_state[BROWSE_JOBS_KEY] = jobs
 st.session_state[RESUME_TEXT_KEY] = "Experience\\nPython projects"
 
-class FakeReportService:
-    def generate(
-        self, analysis, recommendations, skill_plan=None, quality_report=None, career_profile=None
-    ):
-        return b"synthetic pdf"
-
-render_results_page(
-    FakeReportService(),
+render_job_recommendations_page(
     RecommendationService(type("Repository", (), {"list_active_jobs": lambda self: jobs})()),
+    st.Page(lambda: None, title="Analyse Resume"),
 )
 """
     app = AppTest.from_string(source).run(timeout=20)

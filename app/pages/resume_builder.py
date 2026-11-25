@@ -24,18 +24,21 @@ from services.resume_builder_service import (
 _EXISTING_TEXT_KEY = "resume_builder_existing_text"
 _EXISTING_FINGERPRINT_KEY = "resume_builder_existing_fingerprint"
 _TEMPLATES = ("Classic", "Modern", "Compact")
+_ATS_EXPORT_NOTE = (
+    "Single-column PDF with selectable text, designed for ATS readability. Parsing varies; "
+    "follow the employer's file-format requirements."
+)
 
 
 def render_resume_builder(resume_service: ResumeService) -> None:
     """Render guided resume-building and existing-resume editing flows."""
     st.markdown('<div class="section-eyebrow">Resume workspace</div>', unsafe_allow_html=True)
-    st.title("Build or improve your resume")
-    st.write("A guided workspace to shape your experience into a clear, professional resume.")
+    st.title("Create or refine your resume")
+    st.write("The builder formats your content; it does not generate or verify claims.")
     with st.container(border=True):
-        st.markdown("**Private by design**")
+        st.markdown("**Privacy**")
         st.caption(
-            "Your content stays in this active browser session. This workspace does not send "
-            "resume content to AI or save it to the database. Add only accurate information."
+            "Your draft stays in this session. It is not sent to AI or stored in the database."
         )
 
     build_tab, edit_tab = st.tabs(["Create a resume", "Edit an existing resume"])
@@ -46,18 +49,11 @@ def render_resume_builder(resume_service: ResumeService) -> None:
 
 
 def _render_builder() -> None:
-    st.markdown("### Your resume, step by step")
-    st.caption(
-        "Start with the sections you have. A strong student resume can lead with education "
-        "and projects instead of employment history."
-    )
-    st.caption(
-        "Complete each step in order. Open **Review & export** when you're ready to preview "
-        "and download your resume."
-    )
+    st.markdown("### Resume details")
+    st.caption("Use concise, evidence-based language.")
 
     profile_tab, education_tab, experience_tab, review_tab = st.tabs(
-        ["Profile", "Education & skills", "Experience & projects", "Review & export"]
+        ["Summary & contact", "Education & skills", "Experience & projects", "Review & export"]
     )
     with profile_tab:
         name_col, role_col = st.columns(2)
@@ -91,15 +87,12 @@ def _render_builder() -> None:
             max_chars=250,
         )
         summary = st.text_area(
-            "Professional profile",
+            "Professional summary",
             key="resume_builder_summary",
             max_chars=1500,
             height=130,
-            placeholder=(
-                "In 2–4 lines, describe your direction, strongest relevant skills, and "
-                "the evidence you can support."
-            ),
-            help="Keep it specific and truthful. Avoid generic claims such as “hard-working.”",
+            placeholder="Summarize your experience, relevant skills, and career focus.",
+            help="Use specific, supportable details.",
         )
 
     with education_tab:
@@ -125,8 +118,7 @@ def _render_builder() -> None:
 
     with experience_tab:
         st.caption(
-            "No formal job experience yet? Use projects, volunteering, student leadership, "
-            "part-time work, or internships."
+            "No formal experience? Include projects, volunteering, leadership, or internships."
         )
         experience = st.text_area(
             "Experience, volunteering, or leadership",
@@ -137,7 +129,7 @@ def _render_builder() -> None:
                 "Role or activity | Organisation | Dates\n"
                 "Describe what you did, the tools or skills used, and the outcome."
             ),
-            help="Use one entry per role. Start bullets with an action and add a real outcome.",
+            help="Use one entry per role. Lead with an action and include results when accurate.",
         )
         projects = st.text_area(
             "Projects",
@@ -192,16 +184,16 @@ def _render_review(
 
     st.markdown("### Your resume is ready to review")
     st.caption(
-        "The PDF follows this order: Profile, Education, Experience, Projects, Skills, "
-        "then Certifications or activities."
+        "PDF section order: Professional Summary, Education, Experience, Projects, Skills, "
+        "Certifications."
     )
     _render_export(draft, sections)
     st.divider()
     st.markdown("### Resume completeness review")
     st.metric("Resume completeness", f"{completeness}%")
     st.progress(completeness / 100)
-    st.caption("A section checklist only — not an ATS score or a measure of your suitability.")
-    st.markdown("**Section review**")
+    st.caption("This checklist measures completeness only; it is not an ATS score.")
+    st.markdown("**Section checks**")
     for label, status, suggestion in checks:
         with st.expander(f"{label} · {status}", expanded=status != "Complete"):
             st.write(suggestion)
@@ -211,16 +203,16 @@ def _render_export(draft: ResumeDraft, sections: list[tuple[str, str]]) -> None:
     template_col, download_col = st.columns([2, 1])
     with template_col:
         template = st.selectbox(
-            "PDF layout",
+            "Resume layout",
             options=_TEMPLATES,
             key="resume_builder_template",
-            help="Choose a clean, text-based layout. You can switch layouts before downloading.",
+            help="All layouts use a single column and selectable text.",
         )
         st.caption(
             {
-                "Classic": "Centered name with a familiar, traditional section hierarchy.",
-                "Modern": "Left-aligned header with a restrained teal accent.",
-                "Compact": "Tighter spacing to make room for more content.",
+                "Classic": "Traditional section hierarchy.",
+                "Modern": "Navy accent.",
+                "Compact": "Tighter spacing.",
             }[template]
         )
     pdf_bytes = ResumePdfRenderer().render(
@@ -231,7 +223,7 @@ def _render_export(draft: ResumeDraft, sections: list[tuple[str, str]]) -> None:
         subtitle=draft.target_role,
     )
     with download_col:
-        st.markdown("#### Download your resume")
+        st.markdown("#### Download")
         st.download_button(
             "Download PDF",
             data=pdf_bytes,
@@ -241,7 +233,7 @@ def _render_export(draft: ResumeDraft, sections: list[tuple[str, str]]) -> None:
             key="download_built_resume",
             use_container_width=True,
         )
-        st.caption("Your resume is generated in this session. No AI or database storage.")
+        st.caption(_ATS_EXPORT_NOTE)
 
     _render_preview(
         draft.full_name,
@@ -319,6 +311,7 @@ def _render_editor(resume_service: ResumeService) -> None:
         type="primary",
         key="download_edited_resume",
     )
+    st.caption(_ATS_EXPORT_NOTE)
 
 
 _URL_HTML_RE = re.compile(
@@ -336,14 +329,14 @@ def _html_linkify(text: str) -> str:
         href = url if url.startswith(("http://", "https://")) else f"https://{url}"
         return (
             f'<a href="{href}" target="_blank" rel="noopener noreferrer" '
-            f'style="color:#2563eb;text-decoration:underline;">{url}</a>'
+            f'style="color:var(--color-monday-violet);text-decoration:underline;">{url}</a>'
         )
 
     def _email_sub(m: re.Match) -> str:
         email = m.group(0)
         return (
             f'<a href="mailto:{email}" '
-            f'style="color:#2563eb;text-decoration:underline;">{email}</a>'
+            f'style="color:var(--color-monday-violet);text-decoration:underline;">{email}</a>'
         )
 
     safe = _URL_HTML_RE.sub(_url_sub, safe)
@@ -357,21 +350,21 @@ def _render_preview(
     contact_line: str,
     sections: list[tuple[str, str]],
 ) -> None:
-    st.markdown("#### Resume page preview")
+    st.markdown("#### Resume preview")
     with st.container(border=True):
         st.subheader(name.strip() or "Your name")
         if target_role.strip():
             st.markdown(f"**{escape(target_role.strip())}**")
         if contact_line.strip():
             st.markdown(
-                f'<div style="color:#4b5563;font-size:0.88rem;margin-bottom:0.4rem;">{_html_linkify(contact_line.strip())}</div>',
+                f'<div style="color:var(--color-slate);font-size:0.88rem;margin-bottom:0.4rem;">{_html_linkify(contact_line.strip())}</div>',
                 unsafe_allow_html=True,
             )
 
         for heading, content in sections:
             sec_parts = [
-                '<div style="border-top:1px solid #374151;padding-top:0.4rem;margin-top:0.6rem;">',
-                f'<div style="color:#111827;font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:.85rem;margin-bottom:0.25rem;">{escape(heading)}</div>',
+                '<div style="border-top:1px solid var(--color-mist);padding-top:0.4rem;margin-top:0.6rem;">',
+                f'<div style="color:var(--color-ink);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:.85rem;margin-bottom:0.25rem;">{escape(heading)}</div>',
             ]
             for line in content.strip().split("\n"):
                 stripped = line.strip()
@@ -380,12 +373,12 @@ def _render_preview(
                 if stripped.startswith(("•", "-", "–", "▪", "■", "*", "·", "◦")):
                     bullet_text = stripped.lstrip("•-–▪■*·◦ ")
                     sec_parts.append(
-                        f'<div style="padding-left:1.2rem;position:relative;line-height:1.55;font-size:0.88rem;color:#1f2937;">'
+                        f'<div style="padding-left:1.2rem;position:relative;line-height:1.55;font-size:0.88rem;color:var(--color-ink);">'
                         f'<span style="position:absolute;left:0.35rem;">•</span>{_html_linkify(bullet_text)}</div>'
                     )
                 else:
                     sec_parts.append(
-                        f'<div style="line-height:1.55;font-size:0.88rem;color:#1f2937;margin-bottom:0.2rem;">{_html_linkify(stripped)}</div>'
+                        f'<div style="line-height:1.55;font-size:0.88rem;color:var(--color-ink);margin-bottom:0.2rem;">{_html_linkify(stripped)}</div>'
                     )
             sec_parts.append("</div>")
             st.markdown("".join(sec_parts), unsafe_allow_html=True)
